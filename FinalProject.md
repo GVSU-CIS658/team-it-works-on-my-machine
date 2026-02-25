@@ -44,6 +44,42 @@ The system demonstrates modern web architecture principles including:
 
 ## 1.2 Core Application Features
 
+### Minimal Viable Product
+Have grouping working
+* Create group
+* Join group
+* See other updates
+* Leave group
+* Delete Group if owner
+* Create posts within shared groups
+ * Include username, date created, title, body
+Modify and Create own tasks within shared groups
+* Create account
+ * Require Full Name, student ID, and PW
+* Create 2 persona accounts with preset
+* multi-authentication
+User Interface
+* Have a consistent design layout through web pages (Dashboard, Groups, Sessions, Personal Tasks)
+* Have a consistent color design
+Dashboard
+* Can see groups user has joined
+* Review user latest tasks
+* Have different tabs/buttons for Dashboard (Default), Groups, Profile, Sessions, Personal Tasks, Logout
+Personal Tasks
+* Create Personal Tasks
+* Have title, body, completion mark, delete task, reminder date.
+* Edit personal Tasks
+* Filter Personal Tasks
+* Date, alphabetical, search tool for keywords
+* Study Sessions
+* Create / Modify/ send invite /Delete sessions
+
+Nice to have (optional)
+* Profile picture implemented for each User
+* Have filter for groups
+* Search for specific group posts
+
+
 ### Authentication & Authorization
 
 * User registration, login, logout
@@ -153,6 +189,14 @@ App
  └── SharedComponents
 ```
 
+App
+ |── Dashboard
+        |── Personal Tasks
+        |── Groups
+              |── Specific/Subgroup
+        |── Sessions
+        |── Profile
+
 ## 3.3 State Management
 
 Pinia is used to manage:
@@ -190,6 +234,7 @@ Pinia is used to manage:
 | POST   | /api/groups/join |
 | DELETE | /api/groups/:id  |
 | GET    | /api/groups/:id  |
+| GET    | /api/groups      |
 
 ### Group Feed
 
