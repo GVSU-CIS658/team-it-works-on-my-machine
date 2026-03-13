@@ -68,18 +68,38 @@ a
 .section-nav
   display: flex
   flex-wrap: wrap
-  gap: 0.5rem
+  gap: 1rem
 
 .section-nav a
-  padding: 0.7rem 1rem
+  border: none
+  background: var(--nav-button-face)
+  color: var(--nav-button-text)
+  cursor: pointer
+  padding: 0.8rem 1.6rem
+  display: inline-block
+  margin: 0
+  text-transform: uppercase
+  letter-spacing: 1px
+  font-size: inherit
+  font-family: inherit
+  font-weight: 700
+  outline: none
+  position: relative
   border-radius: 999px
   text-decoration: none
-  color: var(--intro-primary)
-  font-weight: 600
+  box-shadow: 0 6px var(--nav-button-shadow)
+  transition: top 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease
 
 .section-nav a.router-link-active
   background: var(--main-primary)
-  color: var(--main-secondary)
+
+.section-nav a:hover
+  box-shadow: 0 4px var(--nav-button-shadow)
+  top: 2px
+
+.section-nav a:active
+  box-shadow: 0 0 var(--nav-button-shadow)
+  top: 6px
 
 .section-main
   flex: 1
