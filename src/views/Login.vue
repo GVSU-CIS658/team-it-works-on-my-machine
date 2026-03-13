@@ -1,16 +1,16 @@
 <template>
   <div class="login-view" style="color: whitesmoke;">
-    <section>
+    <div>
       <p>Authentication</p>
       <h1>Access your academic workspace.</h1>
       <p>
         Sign in or create an account to manage study groups, sessions, and tasks
         from one shared portal.
       </p>
-    </section>
+    </div>
 
-    <section>
-      <article>
+    <div>
+      <div>
         <h2>What this page handles</h2>
         <ul>
           <li>User registration with display name, email, and password.</li>
@@ -18,17 +18,17 @@
           <li>Logout and redirect behavior after authentication.</li>
           <li>Protected route entry into the rest of the application.</li>
         </ul>
-      </article>
+      </div>
 
-      <article>
+      <div>
         <h2>Suggested next step</h2>
         <p>
           Start here, then route authenticated users to the dashboard and route
           unauthorized access attempts to the dedicated error page.
         </p>
         <RouterLink class="inline-link" to="/dashboard">Preview dashboard flow</RouterLink>
-      </article>
-    </section>
+      </div>
+    </div>
 
     <footer  style="background-color: greenyellow; color: black;">
       <p>Remove before deploying</p>

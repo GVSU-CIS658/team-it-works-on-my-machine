@@ -1,7 +1,7 @@
 <template>
   <div class="not-found-view">
-    <section>
-      <p>Campus Access Portal</p>
+    <div>
+      <p>Study Group Portal</p>
       <p>404</p>
       <h1>The page you requested is not on the quad.</h1>
       <p>
@@ -12,18 +12,18 @@
         <RouterLink class="button-primary" to="/login">Return to login</RouterLink>
         <RouterLink class="button-secondary" to="/dashboard">Open dashboard</RouterLink>
       </div>
-    </section>
+    </div>
 
-    <section>
-      <article>
+    <div>
+      <div>
         <h2>Helpful next steps</h2>
         <ul class="feature-list">
           <li>Check the URL for spelling or missing path segments.</li>
           <li>Re-enter through the login or dashboard route.</li>
           <li>Use navigation links instead of old bookmarks.</li>
         </ul>
-      </article>
-    </section>
+      </div>
+    </div>
   </div>
 </template>
 
