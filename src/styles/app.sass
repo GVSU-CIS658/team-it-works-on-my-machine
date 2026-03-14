@@ -70,10 +70,11 @@ a
   flex-wrap: wrap
   gap: 1rem
 
+.button-pill,
 .section-nav a
   border: none
-  background: var(--nav-button-face)
-  color: var(--nav-button-text)
+  background: var(--button-pill-face)
+  color: var(--button-pill-text)
   cursor: pointer
   padding: 0.8rem 1.6rem
   display: inline-block
@@ -87,18 +88,20 @@ a
   position: relative
   border-radius: 999px
   text-decoration: none
-  box-shadow: 0 6px var(--nav-button-shadow)
+  box-shadow: 0 6px var(--button-pill-shadow)
   transition: top 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease
 
 .section-nav a.router-link-active
   background: var(--main-primary)
 
+.button-pill:hover,
 .section-nav a:hover
-  box-shadow: 0 4px var(--nav-button-shadow)
+  box-shadow: 0 4px var(--button-pill-shadow)
   top: 2px
 
+.button-pill:active,
 .section-nav a:active
-  box-shadow: 0 0 var(--nav-button-shadow)
+  box-shadow: 0 0 var(--button-pill-shadow)
   top: 6px
 
 .section-main
