@@ -1,8 +1,4 @@
 {
-  "dependencies": {
-    "sass": "^1.97.3",
-    "vue": "^3.5.29"
-  },
   "name": "team-it-works-on-my-machine",
   "version": "1.0.0",
   "description": "[![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/d7M8Pab7) # **Term Project**",
@@ -25,7 +21,13 @@
     "url": "https://github.com/GVSU-CIS658/team-it-works-on-my-machine/issues"
   },
   "homepage": "https://github.com/GVSU-CIS658/team-it-works-on-my-machine#readme",
+  "dependencies": {
+    "sass": "^1.97.3",
+    "vue": "^3.5.29",
+    "vue-router": "^4.5.1"
+  },
   "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.1",
     "vite": "^7.3.1"
   }
 }

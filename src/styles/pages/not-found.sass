@@ -1,0 +1,203 @@
+.not-found-view
+  // full-page 404 wrapper
+  position: relative
+  display: grid
+  gap: 1.5rem
+  max-width: 68rem
+  margin: 0 auto
+  min-height: 100%
+  align-content: center
+  padding: 1.5rem 1rem 1.5rem
+  isolation: isolate
+
+  &::before
+    // background image
+    content: ''
+    position: fixed
+    inset: 0
+    background-image: linear-gradient(rgba(241, 245, 249, 0.3), rgba(241, 245, 249, 0.3)), url('../../assets/images/desktop.png')
+    background-position: center
+    background-repeat: no-repeat
+    background-size: cover
+    z-index: -2
+
+  &::after
+    // soft overlay tint
+    content: ''
+    position: fixed
+    inset: 0
+    background: linear-gradient(180deg, rgba(219, 231, 255, 0.26), rgba(238, 244, 255, 0.38))
+    z-index: -1
+
+  .page-hero
+    // main message area
+    position: relative
+    overflow: visible
+    padding: 2rem 0 1rem
+    display: grid
+    gap: 2rem
+
+  .page-hero::after
+    // decorative glow
+    content: ''
+    position: absolute
+    inset: auto -4rem -5rem auto
+    width: 14rem
+    height: 14rem
+    border-radius: 50%
+    background: radial-gradient(circle, var(--not-found-glow) 0%, rgba(255, 255, 255, 0) 70%)
+    pointer-events: none
+
+  .status-code
+    // large 404 text
+    margin: 0
+    font-size: clamp(3.5rem, 10vw, 6rem)
+    line-height: 0.95
+    font-weight: 800
+    color: var(--not-found-code)
+
+  h1
+    // page headline
+    margin: 0
+    font-size: clamp(2rem, 4vw, 3rem)
+
+  .hero-copy
+    // notebook-style message block
+    max-width: 34rem
+    padding: 1.05rem 1.35rem 1.2rem 3rem
+    background-color: var(--not-found-paper)
+    background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 1.8rem, var(--not-found-paper-rule) 1.8rem, var(--not-found-paper-rule) 1.92rem)
+    background-position: 0 0.7rem
+    border-radius: 0
+    box-shadow: 0.35rem 0.35rem 0 var(--not-found-paper-shadow)
+    font-size: 1.05rem
+    color: #4d4a2f
+    line-height: 1.92rem
+    position: relative
+
+  .hero-copy::before
+    // red margin line
+    content: ''
+    position: absolute
+    top: 0
+    bottom: 0
+    left: 1.95rem
+    width: 2px
+    background: var(--not-found-paper-margin)
+
+  .hero-copy::after
+    // torn paper edge
+    content: ''
+    position: absolute
+    left: 0
+    right: 0
+    bottom: -12px
+    height: 18px
+    background: radial-gradient(circle at 12px 0, var(--not-found-paper) 12px, transparent 13px) 0 0 / 24px 18px repeat-x
+
+  .page-actions
+    // action button row
+    --button-pill-face: var(--not-found-button-face)
+    --button-pill-shadow: var(--not-found-button-shadow)
+    --button-pill-text: var(--not-found-button-text)
+    display: flex
+    flex-wrap: wrap
+    justify-content: space-between
+    gap: 1rem
+    margin-top: 0
+
+  .page-actions > *
+    // keep buttons evenly sized
+    flex: 1 1 14rem
+
+  .page-actions .button-primary,
+  .page-actions .button-secondary
+    // keep 404 buttons aligned with the shared pill style
+    border: none
+    background: var(--button-pill-face)
+    color: var(--button-pill-text)
+    margin: 0
+    text-transform: uppercase
+    letter-spacing: 1px
+    font-size: inherit
+    font-family: inherit
+    font-weight: 700
+    outline: none
+    position: relative
+    border-radius: 999px
+    text-decoration: none
+    box-shadow: 0 6px var(--not-found-button-shadow)
+    transition: top 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease
+
+  .page-actions .button-primary:hover,
+  .page-actions .button-secondary:hover
+    // hover state
+    box-shadow: 0 4px var(--not-found-button-shadow)
+    top: 2px
+
+  .page-actions .button-primary:active,
+  .page-actions .button-secondary:active
+    // pressed state
+    box-shadow: 0 0 var(--not-found-button-shadow)
+    top: 6px
+
+  p
+    // default paragraph styling
+    color: var(--body-text)
+    line-height: 1.7
+
+  .sticky-notes
+    // recovery steps as sticky notes
+    display: flex
+    flex-wrap: nowrap
+    gap: 1rem
+
+  .sticky-note
+    // base sticky note styling
+    flex: 1 1 0
+    min-height: 8.5rem
+    padding: 1rem
+    background: #bff3d0
+    color: #244032
+    box-shadow: 0.45rem 0.45rem 0 rgba(36, 64, 50, 0.18)
+    border: 1px solid rgba(86, 140, 104, 0.2)
+    transform-origin: center
+
+  .sticky-note p
+    margin: 0
+    font-size: 1rem
+    line-height: 1.45
+    color: inherit
+
+  .sticky-note--one
+    // first note angle and font
+    transform: rotate(-4deg)
+
+  .sticky-note--one p
+    font-family: "Comic Sans MS", "Bradley Hand", cursive
+
+  .sticky-note--two
+    // second note angle and font
+    transform: rotate(2deg)
+
+  .sticky-note--two p
+    font-family: "Segoe Print", "Comic Sans MS", cursive
+
+  .sticky-note--three
+    // third note angle and font
+    transform: rotate(-2deg)
+
+  .sticky-note--three p
+    font-family: "Lucida Handwriting", "Segoe Print", cursive
+
+@media (max-width: 640px)
+  .not-found-view
+    // slightly tighter top spacing
+    padding-top: 1rem
+
+    .sticky-notes
+      flex-wrap: wrap
+
+    .sticky-note
+      min-height: auto
+

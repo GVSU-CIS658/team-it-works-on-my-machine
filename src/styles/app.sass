@@ -1,0 +1,154 @@
+@use './pages/components'
+
+*
+  box-sizing: border-box
+
+body
+  min-height: 100vh
+  background: linear-gradient(180deg, var(--canvas-top) 0%, var(--main-secondary) 24%, var(--canvas-bottom) 100%)
+
+a
+  color: inherit
+
+#app
+  min-height: 100vh
+
+.section-shell
+  min-height: 100vh
+  display: flex
+  flex-direction: column
+
+.section-header
+  position: sticky
+  top: 0
+  z-index: 10
+  backdrop-filter: blur(14px)
+  background: var(--shell-surface-header)
+  border-bottom: 1px solid var(--shell-border)
+
+.section-header-inner
+  max-width: 1100px
+  margin: 0 auto
+  padding: 1rem
+  display: flex
+  flex-wrap: wrap
+  align-items: center
+  justify-content: space-between
+  gap: 1rem
+
+.section-brand
+  display: inline-flex
+  align-items: center
+  gap: 0.9rem
+  text-decoration: none
+
+.section-brand-mark
+  width: 3rem
+  height: 3rem
+  border-radius: 0.85rem
+  display: inline-grid
+  place-items: center
+  background: var(--main-primary)
+  color: var(--main-secondary)
+  font-weight: 800
+  letter-spacing: 0.08em
+
+.section-brand-text
+  display: flex
+  flex-direction: column
+  gap: 0.15rem
+
+.section-brand-text strong
+  font-size: 0.95rem
+  color: var(--intro-primary)
+
+.section-brand-text small
+  color: var(--muted-text)
+
+.section-nav
+  display: flex
+  flex-wrap: wrap
+  gap: 1rem
+
+.button-pill,
+.section-nav a
+  border: none
+  background: var(--button-pill-face)
+  color: var(--button-pill-text)
+  cursor: pointer
+  padding: 0.8rem 1.6rem
+  display: inline-block
+  margin: 0
+  text-transform: uppercase
+  letter-spacing: 1px
+  font-size: inherit
+  font-family: inherit
+  font-weight: 700
+  outline: none
+  position: relative
+  border-radius: 999px
+  text-decoration: none
+  box-shadow: 0 6px var(--button-pill-shadow)
+  transition: top 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease
+
+.section-nav a.router-link-active
+  background: var(--main-primary)
+
+.button-pill:hover,
+.section-nav a:hover
+  box-shadow: 0 4px var(--button-pill-shadow)
+  top: 2px
+
+.button-pill:active,
+.section-nav a:active
+  box-shadow: 0 0 var(--button-pill-shadow)
+  top: 6px
+
+.section-main
+  flex: 1
+
+.section-footer
+  border-top: 1px solid var(--shell-border)
+  padding: 1.25rem 1rem 2rem
+  text-align: center
+  color: var(--muted-text)
+
+.section-footer p
+  margin: 0.2rem 0
+
+.feature-list
+  margin: 0
+  padding-left: 1.2rem
+  color: var(--intro-primary)
+  line-height: 1.7
+
+.button-primary,
+.button-secondary,
+.inline-link
+  display: inline-flex
+  align-items: center
+  justify-content: center
+  min-height: 3rem
+  padding: 0.8rem 1.2rem
+  border-radius: 999px
+  text-decoration: none
+  font-weight: 700
+
+.button-primary
+  background: var(--main-secondary)
+  color: var(--main-primary)
+
+.button-secondary
+  border: 1px solid var(--button-border-light)
+  color: var(--main-secondary)
+
+.inline-link
+  margin-top: 1rem
+  background: var(--main-primary)
+  color: var(--main-secondary)
+
+@media (max-width: 640px)
+  .button-primary,
+  .button-secondary,
+  .inline-link
+    width: 100%
