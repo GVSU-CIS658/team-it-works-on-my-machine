@@ -2,7 +2,7 @@
   <div class="dashboard-view">
     <div>
       <p>Dashboard</p>
-      <h1>Welcome back, username.</h1>
+      <h1>Welcome back, {{username}}.</h1>
       <p>
         Use the dashboard as the landing view for progress, upcoming work, and
         group activity.
@@ -11,11 +11,14 @@
 
     <div>
       <div>
-        <h2>Recent tasks</h2>
+        <h2>Task</h2>
+      </div>
+      <div>
+        <h2>HELLO</h2>
         <ul>
-          <li>Display the five most recent tasks in date order.</li>
-          <li>Highlight due-soon items and completion status.</li>
-          <li>Link each task back to its owning session or course group.</li>
+          <li v-for ="n in groups">{{n.title}}</li>
+          
+      
         </ul>
       </div>
 
@@ -38,5 +41,33 @@
     </div>
   </div>
 </template>
+
+<script setup lang="ts">
+import { Ref } from 'vue';
+
+let username:string = "Matthew Jenkin";
+
+// <li v-for = "n in groups">{{ n.title }}</li>
+
+type Group = {
+title: string;
+description: string;
+numberOfPeople: number;
+};
+
+let groups: Ref<Group>  = [
+  {
+    title: "Math",
+    description: "Math is hard",
+    numberOfPeople: 3
+  },
+   {
+    title: "Science",
+    description: "Speed is in fact relative",
+    numberOfPeople: 10
+  }
+];
+
+</script>
 
 <style scoped lang="sass" src="../styles/pages/dashboard.sass"></style>
