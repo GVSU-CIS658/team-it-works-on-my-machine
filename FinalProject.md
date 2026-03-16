@@ -197,6 +197,12 @@ App
         |── Sessions
         |── Profile
 
+## 3.2.1 Status Page Pattern
+
+The `403 Unauthorized` and `404 Not Found` routes use the same shared Vue component for layout and styling.
+
+Each route view keeps a local `statusPageData` object with the page-specific code, label, heading, message, recovery notes, and available actions. That object is passed into `StatusPage.vue`, which renders the shared layout, loops through notes and actions with Vue, and conditionally shows a `Go back` action when browser history is available.
+
 ## 3.3 State Management
 
 Pinia is used to manage:
