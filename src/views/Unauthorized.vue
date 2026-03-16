@@ -1,31 +1,26 @@
+<script setup>
+import StatusPage from '../components/StatusPage.vue'
+
+const statusPageData = {
+  statusCode: '403',
+  statusLabel: 'Unauthorized',
+  pageTitle: 'This page is off-limits.',
+  pageMessage:
+    'Your account signed in successfully, but it does not have permission to open this page. Head back to a safe route and continue from there.',
+  helpNotes: [
+    { key: 'allowed-route', text: 'switch back to a page your role is allowed to access.' },
+    { key: 'ask-admin', text: 'ask an instructor or admin if you expected to see this content.' },
+    { key: 'avoid-bookmarks', text: 'avoid using old bookmarks for pages tied to restricted data.' },
+  ],
+  pageActions: [
+    { key: 'login', label: 'Return to login', kind: 'link', to: '/login', styleType: 'primary' },
+  ],
+  includeBackAction: true,
+  backActionMode: 'replace',
+  compactSingleAction: true,
+}
+</script>
+
 <template>
-  <div class="unauthorized-view">
-    <div>
-      <p>Unauthorized</p>
-      <h1>You do not have access to this resource.</h1>
-      <p>
-        The application should send users here when backend permission rules deny
-        access to a protected group, page, or action.
-      </p>
-    </div>
-
-    <div>
-      <div>
-        <h2>Typical cases</h2>
-        <ul class="feature-list">
-          <li>A user attempts to open a group they do not belong to.</li>
-          <li>A protected action is denied by authorization rules.</li>
-          <li>A stale link points to content the current user cannot reach.</li>
-        </ul>
-      </div>
-
-      <div>
-        <h2>Recovery path</h2>
-        <p>Give the user a clear route back to a safe page instead of leaving them blocked.</p>
-        <RouterLink class="inline-link" to="/login">Return to login</RouterLink>
-      </div>
-    </div>
-  </div>
+  <StatusPage v-bind="statusPageData" />
 </template>
-
-<style scoped lang="sass" src="../styles/pages/unauthorized.sass"></style>

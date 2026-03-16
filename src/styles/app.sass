@@ -106,6 +106,16 @@ a
 
 .section-main
   flex: 1
+  max-width: none
+  width: 100%
+  margin: 0
+  padding: 0
+
+.section-main:has(> .study-status-page)
+  display: flex
+
+.section-main > .study-status-page
+  flex: 1
 
 .section-footer
   border-top: 1px solid var(--shell-border)
