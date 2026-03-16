@@ -82,40 +82,42 @@ function handleAction(action) {
 
 <template>
   <div class="study-status-page">
-    <section class="study-status-hero">
-      <p class="status-code">{{ statusCode }}</p>
-      <p v-if="statusLabel" class="status-label">{{ statusLabel }}</p>
-      <h1>{{ pageTitle }}</h1>
-      <p class="hero-copy">
-        {{ pageMessage }}
-      </p>
+    <div class="study-status-content">
+      <section class="study-status-hero">
+        <p class="status-code">{{ statusCode }}</p>
+        <p v-if="statusLabel" class="status-label">{{ statusLabel }}</p>
+        <h1>{{ pageTitle }}</h1>
+        <p class="hero-copy">
+          {{ pageMessage }}
+        </p>
 
-      <div class="study-actions" :class="actionRowClass">
-        <component
-          :is="action.kind === 'back' ? 'button' : RouterLink"
-          v-for="action in visibleActions"
-          :key="action.key ?? action.label"
-          class="button-pill"
-          :class="action.styleType === 'secondary' ? 'button-secondary' : 'button-primary'"
-          :to="action.kind === 'link' ? action.to : undefined"
-          :type="action.kind === 'back' ? 'button' : undefined"
-          @click="action.kind === 'back' ? handleAction(action) : undefined"
+        <div class="study-actions" :class="actionRowClass">
+          <component
+            :is="action.kind === 'back' ? 'button' : RouterLink"
+            v-for="action in visibleActions"
+            :key="action.key ?? action.label"
+            class="button-pill"
+            :class="action.styleType === 'secondary' ? 'button-secondary' : 'button-primary'"
+            :to="action.kind === 'link' ? action.to : undefined"
+            :type="action.kind === 'back' ? 'button' : undefined"
+            @click="action.kind === 'back' ? handleAction(action) : undefined"
+          >
+            {{ action.label }}
+          </component>
+        </div>
+      </section>
+
+      <section class="study-note-board" aria-label="recovery steps">
+        <div
+          v-for="(note, index) in helpNotes"
+          :key="note.key ?? note"
+          class="study-note"
+          :class="`study-note--${index + 1}`"
         >
-          {{ action.label }}
-        </component>
-      </div>
-    </section>
-
-    <section class="study-note-board" aria-label="recovery steps">
-      <div
-        v-for="(note, index) in helpNotes"
-        :key="note.key ?? note"
-        class="study-note"
-        :class="`study-note--${index + 1}`"
-      >
-        <p>{{ note.text ?? note }}</p>
-      </div>
-    </section>
+          <p>{{ note.text ?? note }}</p>
+        </div>
+      </section>
+    </div>
   </div>
 </template>
 
