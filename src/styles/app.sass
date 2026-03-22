@@ -19,6 +19,7 @@ a
   flex-direction: column
 
 .section-header
+  font-family: var(--font-heading)
   position: sticky
   top: 0
   z-index: 10
@@ -27,11 +28,10 @@ a
   border-bottom: 1px solid var(--shell-border)
 
 .section-header-inner
-  max-width: 1100px
-  margin: 0 auto
-  padding: 1rem
+  width: 100%
+  margin: 0
+  padding: 1rem 2rem
   display: flex
-  flex-wrap: wrap
   align-items: center
   justify-content: space-between
   gap: 1rem
@@ -66,8 +66,9 @@ a
   color: var(--muted-text)
 
 .section-nav
+  flex: 1
   display: flex
-  flex-wrap: wrap
+  justify-content: center
   gap: 1rem
 
 .button-pill,
@@ -106,8 +107,25 @@ a
 
 .section-main
   flex: 1
+  max-width: none
+  width: 100%
+  margin: 0
+  padding: 0
+
+.section-main:has(> .study-status-page)
+  display: flex
+
+.section-main > .study-status-page
+  flex: 1
+
+.section-user
+  display: flex
+  align-items: center
+  gap: 0.5rem
+  white-space: nowrap
 
 .section-footer
+  font-family: var(--font-heading)
   border-top: 1px solid var(--shell-border)
   padding: 1.25rem 1rem 2rem
   text-align: center
