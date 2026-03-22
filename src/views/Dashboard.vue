@@ -55,7 +55,9 @@ description: string;
 numberOfPeople: number;
 };
 
-let groups: Ref<Group>  = [
+
+
+let groups: Group[]  = [
   {
     title: "Math",
     description: "Math is hard",
