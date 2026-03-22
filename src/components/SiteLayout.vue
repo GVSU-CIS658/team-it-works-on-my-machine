@@ -1,3 +1,9 @@
+<script setup>
+  import { useAuthStore } from '../stores/auth'
+  const auth = useAuthStore()
+  auth.hydrate()
+</script>
+
 <template>
   <div class="section-shell">
     <header class="section-header">
@@ -16,6 +22,11 @@
           <RouterLink to="/groups">Groups</RouterLink>
           <RouterLink to="/sessions">Sessions</RouterLink>
         </nav>
+
+        <div class="section-user" aria-label="Current user">
+          <span class="material-symbols-outlined" aria-hidden="true">account_circle</span>
+          <span>{{ auth.displayName }}</span>
+        </div>
       </div>
     </header>
 
@@ -29,3 +40,4 @@
     </footer>
   </div>
 </template>
+
