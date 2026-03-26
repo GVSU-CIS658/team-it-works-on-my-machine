@@ -24,7 +24,7 @@
         </nav>
 
         <div class="section-user" aria-label="Current user">
-          <span class="material-symbols-outlined" aria-hidden="true">account_circle</span>
+          <v-icon icon="mdi-account-circle" aria-hidden="true" />
           <span>{{ auth.displayName }}</span>
         </div>
       </div>

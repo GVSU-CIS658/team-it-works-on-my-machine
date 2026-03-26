@@ -35,6 +35,7 @@
       <nav aria-label="Temporary development links" style="display: flex; gap: 1rem; margin-top: 0.5rem;">
         <RouterLink to="/unauthorized">Unauthorized</RouterLink>
         <RouterLink to="/not-a-real-route">Not Found</RouterLink>
+        <v-btn color="purple">Test Vuetify</v-btn>
       </nav>
     </footer>
   </div>
