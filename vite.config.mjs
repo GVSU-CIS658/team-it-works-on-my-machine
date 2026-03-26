@@ -7,4 +7,7 @@
       vue(),
       vuetify({ autoImport: true }),
     ],
+    server: {
+      port: 4800,
+    },
   })
