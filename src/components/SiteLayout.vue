@@ -23,10 +23,21 @@
           <RouterLink to="/sessions">Sessions</RouterLink>
         </nav>
 
-        <div class="section-user" aria-label="Current user">
-          <v-icon icon="mdi-account-circle" aria-hidden="true" />
-          <span>{{ auth.displayName }}</span>
-        </div>
+        <v-menu open-on-hover location="bottom end" offset="8">
+          <template #activator="{ props }">
+            <div
+              class="section-user"
+              aria-label="Current user"
+              v-bind="props">
+              <v-icon icon="mdi-account-circle" aria-hidden="true" />
+              <span>{{ auth.displayName }}</span>
+            </div>
+          </template>
+
+          <v-list class="section-user-dropdown">
+            <v-list-item to="/profile" title="Profile" />
+          </v-list>
+        </v-menu>
       </div>
     </header>
 
@@ -40,4 +51,3 @@
     </footer>
   </div>
 </template>
-

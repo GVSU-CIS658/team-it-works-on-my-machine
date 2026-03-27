@@ -119,14 +119,24 @@ a
   flex: 1
 
 .section-user
-  display: flex
+  display: inline-flex
   align-items: center
   gap: 0.5rem
   white-space: nowrap
-  color: var(--main-primary)
+  cursor: pointer
   font-size: 1.5rem
-  .v-icon
-    font-size: 2.5rem
+  color: var(--main-primary)
+
+.section-user .v-icon
+  font-size: 2.5rem
+
+.section-user-dropdown
+  border: 1px solid var(--shell-border)
+  border-radius: 0.85rem
+  background: var(--shell-surface)
+  box-shadow: 0 16px 32px var(--shell-shadow-strong)
+  backdrop-filter: blur(12px)
+  color: var(--main-primary)
 
 .section-footer
   font-family: var(--font-heading)

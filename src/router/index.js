@@ -3,6 +3,7 @@ import Dashboard from '../views/Dashboard.vue'
 import Groups from '../views/Groups.vue'
 import Login from '../views/Login.vue'
 import NotFound from '../views/NotFound.vue'
+import Profile from '../views/Profile.vue'
 import Sessions from '../views/Sessions.vue'
 import Unauthorized from '../views/Unauthorized.vue'
 
@@ -25,6 +26,11 @@ const routes = [
     path: '/groups',
     name: 'groups',
     component: Groups,
+  },
+  {
+    path: '/profile',
+    name: 'profile',
+    component: Profile,
   },
   {
     path: '/sessions',
