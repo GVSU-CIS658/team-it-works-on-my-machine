@@ -1,44 +1,51 @@
+<script setup>
+import { useRoute, useRouter } from 'vue-router'
+
+import desktopImage from '../assets/images/desktop.png'
+import { useAuthStore } from '../stores/auth'
+
+const auth = useAuthStore()
+const route = useRoute()
+const router = useRouter()
+
+function loginInDevelopmentMode() {
+  auth.login({
+    displayName: 'Develop Mode',
+    firstName: 'Develop',
+    lastName: 'Mode',
+    email: 'developer@test.com',
+  })
+
+  const redirectTarget = typeof route.query.redirect === 'string'
+    ? route.query.redirect
+    : '/dashboard'
+
+  router.push(redirectTarget)
+}
+</script>
+
 <template>
-  <div class="login-view" style="color: whitesmoke;">
-    <div>
-      <p>Authentication</p>
-      <h1>Access your academic workspace.</h1>
-      <p>
-        Sign in or create an account to manage study groups, sessions, and tasks
-        from one shared portal.
-      </p>
-    </div>
+  <div class="login-view">
+      <section class="login-card login-card--actions" aria-label="Authentication options">
+        <span class="section-brand-mark">SGP</span>
+        <span class="section-brand-text">
+          <strong>Study Group Portal</strong>
+          <small>Student collaboration space</small>
+        </span>
+        <h1>Welcome</h1>
+        <div class="login-actions">
+          <v-btn class="button-pill login-action-button" variant="flat" @click="loginInDevelopmentMode">
+            Login
+          </v-btn>
+          <v-btn class="button-pill login-action-button" variant="flat">
+            Signup
+          </v-btn>
+        </div>
+      </section>
 
-    <div>
-      <div>
-        <h2>What this page handles</h2>
-        <ul>
-          <li>User registration with display name, email, and password.</li>
-          <li>Sign in flow for returning users.</li>
-          <li>Logout and redirect behavior after authentication.</li>
-          <li>Protected route entry into the rest of the application.</li>
-        </ul>
-      </div>
-
-      <div>
-        <h2>Suggested next step</h2>
-        <p>
-          Start here, then route authenticated users to the dashboard and route
-          unauthorized access attempts to the dedicated error page.
-        </p>
-        <RouterLink class="inline-link" to="/dashboard">Preview dashboard flow</RouterLink>
-      </div>
-    </div>
-
-    <footer  style="background-color: greenyellow; color: black;">
-      <p>Remove before deploying</p>
-      <nav aria-label="Temporary development links" style="display: flex; gap: 1rem; margin-top: 0.5rem;">
-        <RouterLink to="/unauthorized">Unauthorized</RouterLink>
-        <RouterLink to="/not-a-real-route">Not Found</RouterLink>
-        <v-btn color="purplegit status
-        ">Test Vuetify</v-btn>
-      </nav>
-    </footer>
+      <section class="login-card login-card--image" aria-label="Application preview">
+        <img class="login-image" :src="desktopImage" alt="Application desktop preview" />
+      </section>
   </div>
 </template>
 

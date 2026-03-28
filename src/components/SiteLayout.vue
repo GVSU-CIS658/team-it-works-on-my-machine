@@ -1,7 +1,18 @@
 <script setup>
+  import { useRouter } from 'vue-router'
+
+  import Footer from './Footer.vue'
   import { useAuthStore } from '../stores/auth'
+
   const auth = useAuthStore()
+  const router = useRouter()
+
   auth.hydrate()
+
+  function logout() {
+    auth.logout()
+    router.push('/login')
+  }
 </script>
 
 <template>
@@ -17,7 +28,6 @@
         </RouterLink>
 
         <nav class="section-nav" aria-label="Primary">
-          <RouterLink to="/login">Login</RouterLink>
           <RouterLink to="/dashboard">Dashboard</RouterLink>
           <RouterLink to="/groups">Groups</RouterLink>
           <RouterLink to="/sessions">Sessions</RouterLink>
@@ -36,6 +46,7 @@
 
           <v-list class="section-user-dropdown">
             <v-list-item to="/profile" title="Profile" />
+            <v-list-item title="Logout" @click="logout" />
           </v-list>
         </v-menu>
       </div>
@@ -45,9 +56,6 @@
       <slot />
     </main>
 
-    <footer class="section-footer">
-      <p>Study Group Portal</p>
-      <p>Shared academic planning, groups, and sessions.</p>
-    </footer>
+    <Footer />
   </div>
 </template>

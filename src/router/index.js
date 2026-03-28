@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
 import Dashboard from '../views/Dashboard.vue'
 import Groups from '../views/Groups.vue'
 import Login from '../views/Login.vue'
@@ -16,26 +17,31 @@ const routes = [
     path: '/login',
     name: 'login',
     component: Login,
+    meta: { guestOnly: true, layout: 'auth' },
   },
   {
     path: '/dashboard',
     name: 'dashboard',
     component: Dashboard,
+    meta: { requiresAuth: true },
   },
   {
     path: '/groups',
     name: 'groups',
     component: Groups,
+    meta: { requiresAuth: true },
   },
   {
     path: '/profile',
     name: 'profile',
     component: Profile,
+    meta: { requiresAuth: true },
   },
   {
     path: '/sessions',
     name: 'sessions',
     component: Sessions,
+    meta: { requiresAuth: true },
   },
   {
     path: '/unauthorized',
@@ -55,6 +61,24 @@ const router = createRouter({
   scrollBehavior() {
     return { top: 0 }
   },
+})
+
+router.beforeEach((to) => {
+  const auth = useAuthStore()
+  auth.hydrate()
+
+  if (to.meta.requiresAuth && !auth.isAuthenticated) {
+    return {
+      name: 'login',
+      query: { redirect: to.fullPath },
+    }
+  }
+
+  if (to.meta.guestOnly && auth.isAuthenticated) {
+    return { name: 'dashboard' }
+  }
+
+  return true
 })
 
 export default router

@@ -4,6 +4,7 @@
   box-sizing: border-box
 
 body
+  margin: 0
   min-height: 100vh
   background: linear-gradient(180deg, var(--canvas-top) 0%, var(--main-secondary) 24%, var(--canvas-bottom) 100%)
 
@@ -17,6 +18,19 @@ a
   min-height: 100vh
   display: flex
   flex-direction: column
+
+.auth-shell
+  min-height: 100vh
+  display: flex
+  flex-direction: column
+
+.auth-main
+  // Auth pages live outside SiteLayout and share this content area.
+  flex: 1
+  display: flex
+  align-items: center
+  justify-content: center
+  width: 100%
 
 .section-header
   font-family: var(--font-heading)
@@ -137,16 +151,6 @@ a
   box-shadow: 0 16px 32px var(--shell-shadow-strong)
   backdrop-filter: blur(12px)
   color: var(--main-primary)
-
-.section-footer
-  font-family: var(--font-heading)
-  border-top: 1px solid var(--shell-border)
-  padding: 1.25rem 1rem 2rem
-  text-align: center
-  color: var(--muted-text)
-
-.section-footer p
-  margin: 0.2rem 0
 
 .feature-list
   margin: 0

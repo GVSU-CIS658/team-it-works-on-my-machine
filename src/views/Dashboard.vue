@@ -43,17 +43,22 @@
 </template>
 
 <script setup lang="ts">
-import { Ref } from 'vue';
+import { computed } from 'vue'
 
-let username:string = "Matthew Jenkin";
+import { useAuthStore } from '../stores/auth'
+
+const auth = useAuthStore()
+auth.hydrate()
+
+const username = computed(() => auth.displayName || auth.user?.firstName)
 
 // <li v-for = "n in groups">{{ n.title }}</li>
 
 type Group = {
-title: string;
-description: string;
-numberOfPeople: number;
-};
+title: string
+description: string
+numberOfPeople: number
+}
 
 
 
@@ -68,7 +73,7 @@ let groups: Group[]  = [
     description: "Speed is in fact relative",
     numberOfPeople: 10
   }
-];
+]
 
 </script>
 

@@ -63,10 +63,12 @@ export const useAuthStore = defineStore('auth', {
       this.isHydrated = true
     },
 
-    login({ displayName, email, role = 'student' }) {
+    login({ displayName, email, firstName = '', lastName = '', role = 'student' }) {
       const normalizedUser = {
         displayName: displayName?.trim() || email,
         email: email?.trim() || '',
+        firstName: firstName?.trim() || '',
+        lastName: lastName?.trim() || '',
       }
 
       this.user = normalizedUser
