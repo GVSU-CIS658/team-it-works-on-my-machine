@@ -1,5 +1,5 @@
 .login-view
-  // Login fills the shared AuthLayout content area.
+  // Overall auth page layout: left welcome card, right staged card area.
   --login-card-height: 600px
   --login-card-width: 450px
   color: var(--intro-primary)
@@ -20,18 +20,64 @@
   background: linear-gradient(145deg, var(--accent-panel-start), var(--accent-panel-end))
   box-shadow: 0 16px 40px var(--shell-shadow)
 
+.login-stage
+  // Right-side stage: placeholder login/signup panels sit underneath the image cover.
+  position: relative
+  width: var(--login-card-width)
+  min-height: var(--login-card-height)
+
 .login-card--image
+  position: absolute
+  inset: 0
   display: flex
   align-items: center
   justify-content: center
   overflow: hidden
   padding: 0
+  z-index: 2
+  transition: transform 0.45s ease
 
 .login-image
   display: block
   width: 100%
   height: 100%
   object-fit: cover
+
+.login-panel
+  // Hidden auth panels revealed when the image card slides left.
+  position: absolute
+  inset: 0
+  display: flex
+  flex-direction: column
+  align-items: center
+  justify-content: center
+  gap: 2rem
+  opacity: 0
+  pointer-events: none
+  z-index: 1
+
+  h2
+    margin: 0
+    font-size: clamp(2rem, 3vw, 2.8rem)
+
+.login-card--login
+  background: #facc15
+  color: #1f2937
+
+.login-card--signup
+  background: #4ade80
+  color: #14532d
+
+.login-stage--login .login-card--login,
+.login-stage--signup .login-card--signup
+  // Only the active panel should be visible/clickable.
+  opacity: 1
+  pointer-events: auto
+
+.login-stage--login .login-card--image,
+.login-stage--signup .login-card--image
+  // Shared slide motion for both login and signup states.
+  transform: translateX(-100%)
 
 .login-card--actions
   display: flex
@@ -63,6 +109,10 @@
     --login-card-height: 360px
     --login-card-width: 270px
     grid-template-columns: 1fr
+
+  .login-stage
+    justify-self: center
+
   .login-card
     min-height: var(--login-card-height)
 
