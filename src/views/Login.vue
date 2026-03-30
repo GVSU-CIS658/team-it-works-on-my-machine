@@ -9,6 +9,14 @@ const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
 const activePanel = ref(null)
+const username = ref('')
+const password = ref('')
+const showPassword = ref(false)
+const rememberMe = ref(false)
+const signupUsername = ref('')
+const signupPassword = ref('')
+const signupEmail = ref('')
+const showSignupPassword = ref(false)
 
 function openPanel(panelName) {
   activePanel.value = panelName
@@ -64,19 +72,124 @@ function saveSignupPlaceholder() {
         'login-stage--signup': activePanel === 'signup',
       }"
       aria-label="Authentication form stage">
-      <article class="login-card login-panel login-card--login">
+      <div class="login-card login-panel login-card--login">
         <h2>Login</h2>
-        <v-btn class="button-pill login-action-button" variant="flat" @click="loginInDevelopmentMode">
-          Login
-        </v-btn>
-      </article>
+        <div class="login-fields">
+          <div class="login-field">
+            <span class="login-field-label">Username</span>
+            <v-text-field
+              v-model="username"
+              class="login-input"
+              variant="outlined"
+              density="comfortable"
+              prepend-inner-icon="mdi-account-circle"
+              hide-details
+            />
+          </div>
+          <div class="login-field">
+            <span class="login-field-label">Password</span>
+            <v-text-field
+              v-model="password"
+              class="login-input"
+              :type="showPassword ? 'text' : 'password'"
+              variant="outlined"
+              density="comfortable"
+              prepend-inner-icon="mdi-lock-outline"
+              :append-inner-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
+              hide-details
+              @click:append-inner="showPassword = !showPassword"
+            />
+          </div>
+        </div>
+        <div class="login-utility-row">
+          <v-checkbox
+            v-model="rememberMe"
+            class="login-remember"
+            label="Remember me"
+            density="comfortable"
+            hide-details
+          />
+          <v-btn class="login-forgot-button" variant="text">
+            Forgot Password
+          </v-btn>
+        </div>
+        <div class="login-primary-actions">
+          <v-btn class="button-pill login-action-button login-primary-action-button" variant="flat" @click="loginInDevelopmentMode">
+            Login
+          </v-btn>
+          <v-btn class="button-pill login-action-button login-primary-action-button" variant="flat" @click="closePanel">
+            Cancel
+          </v-btn>
+        </div>
+        <div class="login-divider" aria-hidden="true">
+          <span>OR CONTINUE WITH</span>
+        </div>
+        <div class="login-social-row" aria-label="Social login options">
+          <v-btn class="login-social-button" icon variant="text" aria-label="Facebook">
+            <v-icon icon="mdi-facebook" />
+          </v-btn>
+          <v-btn class="login-social-button" icon variant="text" aria-label="Twitter">
+            <v-icon icon="mdi-twitter" />
+          </v-btn>
+          <v-btn class="login-social-button" icon variant="text" aria-label="Instagram">
+            <v-icon icon="mdi-instagram" />
+          </v-btn>
+          <v-btn class="login-social-button" icon variant="text" aria-label="Google">
+            <v-icon icon="mdi-google" />
+          </v-btn>
+        </div>
+      </div>
 
-      <article class="login-card login-panel login-card--signup">
-        <h2>Signup</h2>
-        <v-btn class="button-pill login-action-button" variant="flat" @click="saveSignupPlaceholder">
-          Save
-        </v-btn>
-      </article>
+      <div class="login-card login-panel login-card--signup">
+        <h2>Sign-up</h2>
+        <div class="login-fields">
+          <div class="login-field">
+            <span class="login-field-label">Username</span>
+            <v-text-field
+              v-model="signupUsername"
+              class="login-input"
+              variant="outlined"
+              density="comfortable"
+              prepend-inner-icon="mdi-account-circle"
+              hide-details
+            />
+          </div>
+          <div class="login-field">
+            <span class="login-field-label">Password</span>
+            <v-text-field
+              v-model="signupPassword"
+              class="login-input"
+              :type="showSignupPassword ? 'text' : 'password'"
+              variant="outlined"
+              density="comfortable"
+              prepend-inner-icon="mdi-lock-outline"
+              :append-inner-icon="showSignupPassword ? 'mdi-eye-off' : 'mdi-eye'"
+              hide-details
+              @click:append-inner="showSignupPassword = !showSignupPassword"
+            />
+          </div>
+          <div class="login-field">
+            <span class="login-field-label">Email</span>
+            <v-text-field
+              v-model="signupEmail"
+              class="login-input"
+              type="email"
+              variant="outlined"
+              density="comfortable"
+              prepend-inner-icon="mdi-email-outline"
+              hide-details
+            />
+          </div>
+        </div>
+        <div class="signup-actions">
+          <v-btn class="button-pill login-action-button signup-action-button" variant="flat" @click="saveSignupPlaceholder">
+            Save
+          </v-btn>
+          <v-btn class="button-pill login-action-button signup-action-button" variant="flat" @click="closePanel">
+            Cancel
+          </v-btn>
+        </div>
+      </div>
 
       <section class="login-card login-card--image" aria-label="Application preview">
         <img class="login-image" :src="desktopImage" alt="Application desktop preview" />
