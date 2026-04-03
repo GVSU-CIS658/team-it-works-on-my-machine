@@ -1,6 +1,6 @@
 <template>
   <div class="dashboard-view">
-    <div>
+    <div class="head">
       <h1>Welcome back, {{username}}.</h1>
       <p>
         Use the dashboard as the landing view for progress, upcoming work, and
@@ -10,15 +10,26 @@
 
     <div >
       <div class="dashboard-border">
-        <h2>Task</h2>
+      <div class="dashboard-title">
+        <div><h2>Task</h2></div>
+        
+      </div>
+          <div class="dashboard-pad">
+            <input placeholder="Eat Dinner" v-model="message"></input>
+            <v-btn class="dashboard-button" @click="addTask(message, tasks.length)">Add Task</v-btn>
+          </div>
          <ul>
-          <li class="dashboard-list" v-for ="n in tasks">
-            <div class="dashboard-pad"><input type="checkbox" name="{{ n.description }}" value="{{n.isCompleted}}" checked="">
-              <span>{{ n.description }}</span>
+          <li class="dashboard-list" v-for ="(n,idx) in tasks" :key="idx" >
+            <div class="dashboard-pad""><input type="checkbox" name="{{ n.description }}" v-model="n.isCompleted">
+              <s v-if="n.isCompleted">{{ n.description }}</s>
+              <span  v-if="!n.isCompleted">{{ n.description }}</span>
               </input>
               </div>
               <div></div>
-            <div> <p>{{ n.date.toLocaleDateString()}}</p></div>
+            <div>
+               <s v-if="n.isCompleted">{{ n.date.toLocaleDateString()}}</s> 
+              <span v-if="!n.isCompleted">{{ n.date.toLocaleDateString()}}</span>
+            </div>
            
           </li>
         </ul>
@@ -50,22 +61,18 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-
+import {Task, DashboardTask} from '../stores/Tasks'
 import { useAuthStore } from '../stores/auth'
+
+var message:string ="";
 
 const auth = useAuthStore()
 auth.hydrate()
 
 const username = computed(() => auth.displayName || auth.user?.firstName)
-
+let {tasks, filteredTasks} = DashboardTask();
+const {addTask,addTestTask} = DashboardTask();
 // <li v-for = "n in groups">{{ n.title }}</li>
-
-type Task = {
-  description: string;
-  date: Date;
-  isCompleted: boolean;
-  isHidden:boolean;
-}
 
 type Group = {
 title: string
@@ -73,8 +80,8 @@ description: string
 numberOfPeople: number
 }
 
-let tasks: Task[] = [
-  {
+let testTask: Task[] = [
+  { id:0,
     description: "Eat breakfast!",
     date: new Date ("February 01, 2025"),
     isCompleted: false,
@@ -82,13 +89,13 @@ let tasks: Task[] = [
   }
   ,
   {
+    id:1,
     description: "Do push Up",
     date: new Date ("March 01, 2025"),
     isCompleted: true,
     isHidden: false,
   }
 ]
-
 let groups: Group[]  = [
   {
     title: "Math",
@@ -100,7 +107,11 @@ let groups: Group[]  = [
     description: "Speed is in fact relative",
     numberOfPeople: 10
   }
-]
+];
+
+addTestTask(testTask[0]);
+addTestTask(testTask[1]);
+
 
 </script>
 
