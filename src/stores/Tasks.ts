@@ -10,19 +10,25 @@ type Task = {
     isHidden: boolean;
 }
 
-type HideFilter = {
-    hideCompleted: boolean
+enum filterOption {
+    All,
+    Finished,
+    Unfinished,
+    Sooner,
+    Later
 }
+
 
 export const DashboardTask = defineStore("DashboardTask", {
     state: () => ({
         tasks: [] as Task[],
         filteredTasks: [] as Task[],
-        hideFilter: false,
+        myFilter: filterOption.All,
+
     }),
     actions: {
         addTask(task: string, id: number) {
-
+            if (task == "") return;
             this.tasks.push({
                 id,
                 description: task,
@@ -41,16 +47,7 @@ export const DashboardTask = defineStore("DashboardTask", {
         },
         updateTask() { },
 
-        filterTask(hideFilter: boolean) {
-            this.hideFilter = hideFilter;
-            this.filteredTasks = this.tasks;
-            console.log(this.filteredTasks);
-            if (this.hideFilter) {
-                this.filteredTasks = this.tasks.filter(x => x.isCompleted);
-            } else {
-                this.filteredTasks = this.tasks;
-            }
-
+        filterTask() {
         }
     },
 });

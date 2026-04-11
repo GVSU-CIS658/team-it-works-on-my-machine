@@ -15,10 +15,14 @@
         
       </div>
           <div class="dashboard-pad">
-            <input placeholder="Eat Dinner" v-model="message"></input>
-            <v-btn class="dashboard-button" @click="addTask(message, tasks.length)">Add Task</v-btn>
+            
+            <input class="dashboard-input" placeholder="Add New Task" v-model="message"></input>
+            <v-btn class="button-pill dashboard-button" variant="flat" click="addTask(message, tasks.length)">Add Task</v-btn>
+           
           </div>
+          <nav>
          <ul>
+          
           <li class="dashboard-list" v-for ="(n,idx) in tasks" :key="idx" >
             <div class="dashboard-pad""><input type="checkbox" name="{{ n.description }}" v-model="n.isCompleted">
               <s v-if="n.isCompleted">{{ n.description }}</s>
@@ -29,10 +33,26 @@
             <div>
                <s v-if="n.isCompleted">{{ n.date.toLocaleDateString()}}</s> 
               <span v-if="!n.isCompleted">{{ n.date.toLocaleDateString()}}</span>
+              <v-btn
+                icon
+                variant="text"
+                class="dashboard-icon-button"
+                aria-label="Edit task"
+                @click="editTask()">
+                <v-icon icon="mdi-pencil" />
+              </v-btn>
+                  <v-btn
+                icon
+                variant="text"
+                class="dashboard-icon-button"
+                aria-label="Delete Task"
+                @click="deleteTask()">
+                <v-icon icon="mdi-trash-can-outline" />
+              </v-btn>
             </div>
-           
           </li>
         </ul>
+      </nav>
       </div>
       <div class="dashboard-border">
 
@@ -64,6 +84,12 @@ import { computed } from 'vue'
 import {Task, DashboardTask} from '../stores/Tasks'
 import { useAuthStore } from '../stores/auth'
 
+enum taskState {
+  read,
+  edit,
+  finish
+}
+
 var message:string ="";
 
 const auth = useAuthStore()
@@ -94,6 +120,13 @@ let testTask: Task[] = [
     date: new Date ("March 01, 2025"),
     isCompleted: true,
     isHidden: false,
+  },
+   {
+    id:2,
+    description: "working",
+    date: new Date ("March 01, 2025"),
+    isCompleted: true,
+    isHidden: false,
   }
 ]
 let groups: Group[]  = [
@@ -109,8 +142,16 @@ let groups: Group[]  = [
   }
 ];
 
+function editTask(){
+  console.log("edit Task here");
+}
+
+function deleteTask(){
+  console.log("delete task here");
+}
 addTestTask(testTask[0]);
 addTestTask(testTask[1]);
+addTestTask(testTask[2]);
 
 
 </script>
