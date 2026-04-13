@@ -22,21 +22,28 @@ type Task = {
     isHidden: boolean;
 }
 
-enum filterOption {
-    All,
-    Finished,
-    Unfinished,
-    Sooner,
-    Later,
-    Alphabet,
-}
+export const TASK_FILTER_OPTIONS = Object.freeze({
+    ALL: 'all',
+    FINISHED: 'finished',
+    UNFINISHED: 'unfinished',
+    SOONER: 'sooner',
+    LATER: 'later',
+});
+
+export const TASK_SORT_OPTIONS = Object.freeze({
+    DATE: 'date',
+    ALPHABET: 'alphabet',
+});
+
+type TaskFilterOption = typeof TASK_FILTER_OPTIONS[keyof typeof TASK_FILTER_OPTIONS];
+type TaskSortOption = typeof TASK_SORT_OPTIONS[keyof typeof TASK_SORT_OPTIONS];
 
 
 export const DashboardTask = defineStore("DashboardTask", {
     state: () => ({
         tasks: [] as Task[],
         filteredTasks: [] as Task[],
-        myFilter: filterOption.All,
+        myFilter: TASK_FILTER_OPTIONS.ALL as TaskFilterOption,
 
     }),
     actions: {
@@ -54,7 +61,7 @@ export const DashboardTask = defineStore("DashboardTask", {
                     this.tasks.push(data);
                 })
             });
-            this.filterTask(filterOption.Alphabet);
+            this.filterTask(TASK_FILTER_OPTIONS.ALL);
 
         },
         addTask(task: string, id: number, user: string) {
@@ -73,33 +80,20 @@ export const DashboardTask = defineStore("DashboardTask", {
             const myTasks = collection(db, "Tasks");
             addDoc(myTasks, { ...newTask, date: newTask.date.toString() });
             this.tasks.push(newTask);
-            this.filterTask(filterOption.Alphabet);
+            this.filterTask(TASK_FILTER_OPTIONS.ALL);
         },
         updateTask(id: number, user: string) {
 
         },
 
-        filterTask(option: filterOption) {
+        filterTask(option: TaskFilterOption) {
             this.myFilter = option;
             switch (this.myFilter) {
-                case filterOption.Sooner:
+                case TASK_FILTER_OPTIONS.SOONER:
 
                     this.tasks.sort((a, b) => b.date.getDate() - a.date.getDate());
                     break;
 
-                case filterOption.Alphabet:
-                    console.log("neat");
-                    this.tasks.sort((a, b) => {
-                        if (a.description.toUpperCase() > b.description.toUpperCase()) {
-                            return 1;
-                        }
-                        if (a.description.toUpperCase() < b.description.toUpperCase()) {
-                            return -1;
-                        }
-                        return 0;
-                    })
-                        ;
-                    break;
                 default:
                     this.tasks.sort((a, b) => b.date.getDate() - a.date.getDate());
                     break;
@@ -110,7 +104,8 @@ export const DashboardTask = defineStore("DashboardTask", {
     },
 });
 
-export { filterOption }
+export type { TaskFilterOption }
+export type { TaskSortOption }
 
 export type { Task }
 
