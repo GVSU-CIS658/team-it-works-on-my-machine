@@ -40,7 +40,7 @@
               aria-label="Current user"
               v-bind="props">
               <v-icon icon="mdi-account-circle" aria-hidden="true" />
-              <span>{{ auth.displayName }}</span>
+              <span>{{ auth.username }}</span>
             </div>
           </template>
 

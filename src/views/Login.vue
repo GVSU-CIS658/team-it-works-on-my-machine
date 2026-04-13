@@ -9,14 +9,19 @@ const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
 const activePanel = ref(null)
-const username = ref('')
+const email = ref('')
 const password = ref('')
 const showPassword = ref(false)
 const rememberMe = ref(false)
 const signupUsername = ref('')
 const signupPassword = ref('')
 const signupEmail = ref('')
+const signupEmailError = ref('')
 const showSignupPassword = ref(false)
+
+function isValidEmailAddress(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+}
 
 function openPanel(panelName) {
   activePanel.value = panelName
@@ -28,7 +33,7 @@ function closePanel() {
 
 function loginInDevelopmentMode() {
   auth.login({
-    displayName: 'Develop Mode',
+    username: 'Develop Mode',
     firstName: 'Develop',
     lastName: 'Mode',
     email: 'developer@test.com',
@@ -42,6 +47,20 @@ function loginInDevelopmentMode() {
 }
 
 function saveSignupPlaceholder() {
+  const normalizedEmail = signupEmail.value.trim()
+
+  if (!normalizedEmail) {
+    signupEmailError.value = 'Email is required.'
+    return
+  }
+
+  if (!isValidEmailAddress(normalizedEmail)) {
+    signupEmailError.value = 'Enter a valid email address.'
+    return
+  }
+
+  signupEmail.value = normalizedEmail
+  signupEmailError.value = ''
   closePanel()
 }
 </script>
@@ -76,13 +95,13 @@ function saveSignupPlaceholder() {
         <h2>Login</h2>
         <div class="login-fields">
           <div class="login-field">
-            <span class="login-field-label">Username</span>
+            <span class="login-field-label">Email</span>
             <v-text-field
-              v-model="username"
+              v-model="email"
               class="login-input"
               variant="outlined"
               density="comfortable"
-              prepend-inner-icon="mdi-account-circle"
+              prepend-inner-icon="mdi-email-outline"
               hide-details
             />
           </div>
@@ -177,7 +196,9 @@ function saveSignupPlaceholder() {
               variant="outlined"
               density="comfortable"
               prepend-inner-icon="mdi-email-outline"
-              hide-details
+              :error-messages="signupEmailError"
+              hide-details="auto"
+              @update:model-value="signupEmailError = ''"
             />
           </div>
         </div>

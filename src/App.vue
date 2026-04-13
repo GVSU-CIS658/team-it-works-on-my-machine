@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import  db from '../firebase.ts'
+import  db from './services/firebase.ts'
 import {doc, collection, DocumentSnapshot, getDoc} from "firebase/firestore"
 
 import AuthLayout from './components/AuthLayout.vue'

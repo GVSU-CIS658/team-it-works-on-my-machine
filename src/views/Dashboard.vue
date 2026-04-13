@@ -95,7 +95,7 @@ var message:string ="";
 const auth = useAuthStore()
 auth.hydrate()
 
-const username = computed(() => auth.displayName || auth.user?.firstName)
+const username = computed(() => auth.username || auth.user?.firstName)
 let {tasks, filteredTasks} = DashboardTask();
 const {addTask, filterTask , init} = DashboardTask();
 

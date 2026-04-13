@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia'
 
+import { DEFAULT_ROLE } from '../models/user'
+
 const AUTH_STORAGE_KEY = 'cis658.auth'
 
 function readStoredSession() {
@@ -43,7 +45,7 @@ export const useAuthStore = defineStore('auth', {
 
   getters: {
     isAuthenticated: (state) => Boolean(state.user),
-    displayName: (state) => state.user?.displayName ?? 'Guest',
+    username: (state) => state.user?.username ?? 'Guest',
     emailAddress: (state) => state.user?.email ?? '',
   },
 
@@ -63,9 +65,9 @@ export const useAuthStore = defineStore('auth', {
       this.isHydrated = true
     },
 
-    login({ displayName, email, firstName = '', lastName = '', role = 'student' }) {
+    login({ username, email, firstName = '', lastName = '', role = DEFAULT_ROLE }) {
       const normalizedUser = {
-        displayName: displayName?.trim() || email,
+        username: username?.trim() || email,
         email: email?.trim() || '',
         firstName: firstName?.trim() || '',
         lastName: lastName?.trim() || '',

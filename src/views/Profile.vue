@@ -1,14 +1,19 @@
 <script setup>
 import { reactive, ref } from 'vue'
 
+import { DEFAULT_ROLE, STUDY_MAJORS, USER_ROLES } from '../models/user'
+
 const isEditing = ref(false)
+const roleOptions = Object.values(USER_ROLES)
+const studyMajorOptions = Object.values(STUDY_MAJORS)
 
 const profile = reactive({
-  displayName: 'Guest',
+  username: 'Guest',
   email: 'guest@example.edu',
   firstName: 'Guest',
   lastName: 'User',
-  studyMajor: 'Undeclared',
+  role: DEFAULT_ROLE,
+  studyMajor: STUDY_MAJORS.UNDECLARED,
 })
 
 const draftProfile = reactive({ ...profile })
@@ -32,16 +37,16 @@ function cancelEditing() {
 <template>
   <div class="profile-view">
     <section class="profile-hero">
-      <h1>{{ profile.displayName }}</h1>
+      <h1>{{ profile.username }}</h1>
     </section>
 
       <div class="profile-card profile-card--identity">
         <h2>Profile</h2>
         <dl class="profile-fields">
           <div>
-            <dt>Display Name</dt>
-            <dd v-if="!isEditing">{{ profile.displayName }}</dd>
-            <v-text-field v-else v-model="draftProfile.displayName" variant="outlined" density="comfortable" hide-details />
+            <dt>Username</dt>
+            <dd v-if="!isEditing">{{ profile.username }}</dd>
+            <v-text-field v-else v-model="draftProfile.username" variant="outlined" density="comfortable" hide-details />
           </div>
           <div>
             <dt>Email</dt>
@@ -61,7 +66,26 @@ function cancelEditing() {
           <div>
             <dt>Study Major</dt>
             <dd v-if="!isEditing">{{ profile.studyMajor }}</dd>
-            <v-text-field v-else v-model="draftProfile.studyMajor" variant="outlined" density="comfortable" hide-details />
+            <v-select
+              v-else
+              v-model="draftProfile.studyMajor"
+              :items="studyMajorOptions"
+              variant="outlined"
+              density="comfortable"
+              hide-details
+            />
+          </div>
+          <div>
+            <dt>Role</dt>
+            <dd v-if="!isEditing">{{ profile.role }}</dd>
+            <v-select
+              v-else
+              v-model="draftProfile.role"
+              :items="roleOptions"
+              variant="outlined"
+              density="comfortable"
+              hide-details
+            />
           </div>
         </dl>
 
