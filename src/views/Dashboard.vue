@@ -17,7 +17,7 @@
           <div class="dashboard-pad">
             
             <input class="dashboard-input" placeholder="Add New Task" v-model="message"></input>
-            <v-btn class="button-pill dashboard-button" variant="flat" click="addTask(message, tasks.length)">Add Task</v-btn>
+            <v-btn class="button-pill dashboard-button" variant="flat" @click="addTask(message, tasks.length, 'COOL BEAN')">Add Task</v-btn>
            
           </div>
           <nav>
@@ -81,7 +81,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import {Task, DashboardTask} from '../stores/Tasks'
+import {Task, DashboardTask, filterOption,} from '../stores/Tasks'
 import { useAuthStore } from '../stores/auth'
 
 enum taskState {
@@ -97,8 +97,7 @@ auth.hydrate()
 
 const username = computed(() => auth.displayName || auth.user?.firstName)
 let {tasks, filteredTasks} = DashboardTask();
-const {addTask,addTestTask} = DashboardTask();
-// <li v-for = "n in groups">{{ n.title }}</li>
+const {addTask, filterTask , init} = DashboardTask();
 
 type Group = {
 title: string
@@ -106,29 +105,6 @@ description: string
 numberOfPeople: number
 }
 
-let testTask: Task[] = [
-  { id:0,
-    description: "Eat breakfast!",
-    date: new Date ("February 01, 2025"),
-    isCompleted: false,
-    isHidden: false,
-  }
-  ,
-  {
-    id:1,
-    description: "Do push Up",
-    date: new Date ("March 01, 2025"),
-    isCompleted: true,
-    isHidden: false,
-  },
-   {
-    id:2,
-    description: "working",
-    date: new Date ("March 01, 2025"),
-    isCompleted: true,
-    isHidden: false,
-  }
-]
 let groups: Group[]  = [
   {
     title: "Math",
@@ -149,9 +125,7 @@ function editTask(){
 function deleteTask(){
   console.log("delete task here");
 }
-addTestTask(testTask[0]);
-addTestTask(testTask[1]);
-addTestTask(testTask[2]);
+init();
 
 
 </script>
