@@ -93,7 +93,6 @@ enum taskState {
 var message:string ="";
 
 const auth = useAuthStore()
-auth.hydrate()
 
 const username = computed(() => auth.username || auth.user?.firstName)
 let {tasks, filteredTasks} = DashboardTask();

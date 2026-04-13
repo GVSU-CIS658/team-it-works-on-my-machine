@@ -3,7 +3,6 @@ import { ref, computed } from 'vue'
 import { useAuthStore } from '../stores/auth'
 
 const auth = useAuthStore()
-auth.hydrate()
 
 const currentUserId = computed(() => auth.user?.uid || '')
 

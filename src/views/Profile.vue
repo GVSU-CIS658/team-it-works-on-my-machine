@@ -1,36 +1,61 @@
 <script setup>
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 
-import { DEFAULT_ROLE, STUDY_MAJORS, USER_ROLES } from '../models/user'
+import { STUDY_MAJORS, USER_ROLES, createEmptyUserProfile } from '../models/user'
+import { useAuthStore } from '../stores/auth'
 
+const auth = useAuthStore()
+const router = useRouter()
 const isEditing = ref(false)
+const isDeleting = ref(false)
 const roleOptions = Object.values(USER_ROLES)
 const studyMajorOptions = Object.values(STUDY_MAJORS)
 
-const profile = reactive({
-  username: 'Guest',
-  email: 'guest@example.edu',
-  firstName: 'Guest',
-  lastName: 'User',
-  role: DEFAULT_ROLE,
-  studyMajor: STUDY_MAJORS.UNDECLARED,
-})
-
-const draftProfile = reactive({ ...profile })
+const profile = computed(() => auth.user ?? createEmptyUserProfile())
+const draftProfile = reactive(createEmptyUserProfile())
 
 function startEditing() {
-  Object.assign(draftProfile, profile)
+  auth.clearError()
+  Object.assign(draftProfile, profile.value)
+  isDeleting.value = false
   isEditing.value = true
 }
 
-function saveProfile() {
-  Object.assign(profile, draftProfile)
-  isEditing.value = false
+async function saveProfile() {
+  try {
+    await auth.updateUserProfile(draftProfile)
+    isEditing.value = false
+  } catch {
+    // The auth store maps Firebase errors into auth.error for display.
+  }
 }
 
 function cancelEditing() {
-  Object.assign(draftProfile, profile)
+  auth.clearError()
+  Object.assign(draftProfile, profile.value)
   isEditing.value = false
+}
+
+function startDeleting() {
+  auth.clearError()
+  isEditing.value = false
+  isDeleting.value = true
+}
+
+function cancelDeleting() {
+  auth.clearError()
+  isDeleting.value = false
+}
+
+async function confirmDeleteProfile() {
+  try {
+    await auth.deleteCurrentUser()
+    isDeleting.value = false
+    router.push('/login')
+  } catch {
+    // The auth store maps Firebase errors into auth.error for display.
+  }
 }
 </script>
 
@@ -42,7 +67,7 @@ function cancelEditing() {
 
       <div class="profile-card profile-card--identity">
         <h2>Profile</h2>
-        <dl class="profile-fields">
+        <dl v-if="!isDeleting" class="profile-fields">
           <div>
             <dt>Username</dt>
             <dd v-if="!isEditing">{{ profile.username }}</dd>
@@ -88,26 +113,67 @@ function cancelEditing() {
             />
           </div>
         </dl>
+        <p v-if="auth.error && !isDeleting" class="profile-error-message">
+          {{ auth.error }}
+        </p>
 
-        <div class="profile-actions">
+        <div v-if="isDeleting" class="profile-delete-confirmation">
+          <p>
+            Are you sure you want to remove yourself?<br />
+            There is no going back from this!
+          </p>
+          <p v-if="auth.error" class="profile-delete-error">
+            {{ auth.error }}
+          </p>
+          <div class="profile-delete-actions">
+            <v-btn
+              class="button-pill profile-delete-button profile-delete-button--confirm"
+              variant="flat"
+              :loading="auth.isLoading"
+              @click="confirmDeleteProfile">
+              Yes, I am Outta here!
+            </v-btn>
+            <v-btn
+              class="button-pill profile-delete-button profile-delete-button--cancel"
+              variant="flat"
+              :disabled="auth.isLoading"
+              @click="cancelDeleting">
+              Oh, No!, let's go back!
+            </v-btn>
+          </div>
+        </div>
+
+        <div v-else class="profile-actions">
           <v-btn
             v-if="!isEditing"
             class="button-pill profile-action-button"
             variant="flat"
+            :disabled="auth.isLoading"
             @click="startEditing">
             EDIT
+          </v-btn>
+          <v-btn
+            v-if="!isEditing"
+            class="button-pill profile-action-button profile-delete-action-button"
+            variant="flat"
+            aria-label="Delete profile"
+            :disabled="auth.isLoading"
+            @click="startDeleting">
+            <v-icon icon="mdi-trash-can-outline" />
           </v-btn>
 
           <template v-else>
             <v-btn
               class="button-pill profile-action-button"
               variant="flat"
+              :loading="auth.isLoading"
               @click="saveProfile">
               SAVE
             </v-btn>
             <v-btn
               class="button-pill profile-action-button"
               variant="flat"
+              :disabled="auth.isLoading"
               @click="cancelEditing">
               CANCEL
             </v-btn>

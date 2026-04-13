@@ -1,46 +1,49 @@
 import { defineStore } from 'pinia'
+import {
+  createUserWithEmailAndPassword,
+  deleteUser,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signOut,
+} from 'firebase/auth'
+import { deleteDoc, doc, getDoc, setDoc } from 'firebase/firestore'
 
-import { DEFAULT_ROLE } from '../models/user'
+import { auth as firebaseAuth, db } from '../services/firebase'
+import {
+  DEFAULT_ROLE,
+  createUserProfileFromFirebaseUser,
+  createUserProfileFromSignup,
+} from '../models/user'
 
-const AUTH_STORAGE_KEY = 'cis658.auth'
+let authStatePromise = null
+let unsubscribeAuthState = null
 
-function readStoredSession() {
-  if (typeof window === 'undefined') {
-    return null
+function getAuthErrorMessage(error) {
+  switch (error?.code) {
+    case 'auth/email-already-in-use':
+      return 'An account with this email already exists.'
+    case 'auth/invalid-email':
+      return 'Enter a valid email address.'
+    case 'auth/invalid-credential':
+    case 'auth/user-not-found':
+    case 'auth/wrong-password':
+      return 'Email or password is incorrect.'
+    case 'auth/weak-password':
+      return 'Password should be at least 6 characters.'
+    case 'auth/requires-recent-login':
+      return 'Please log out and log back in before deleting your account.'
+    default:
+      return error?.message ?? 'Authentication failed. Please try again.'
   }
-
-  const rawSession = window.localStorage.getItem(AUTH_STORAGE_KEY)
-
-  if (!rawSession) {
-    return null
-  }
-
-  try {
-    return JSON.parse(rawSession)
-  } catch {
-    window.localStorage.removeItem(AUTH_STORAGE_KEY)
-    return null
-  }
-}
-
-function writeStoredSession(session) {
-  if (typeof window === 'undefined') {
-    return
-  }
-
-  if (!session) {
-    window.localStorage.removeItem(AUTH_STORAGE_KEY)
-    return
-  }
-
-  window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session))
 }
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     user: null,
-    role: null,
+    role: DEFAULT_ROLE,
     isHydrated: false,
+    isLoading: false,
+    error: '',
   }),
 
   getters: {
@@ -50,45 +53,214 @@ export const useAuthStore = defineStore('auth', {
   },
 
   actions: {
-    hydrate() {
+    // Subscribes once to Firebase Auth and hydrates Pinia after page refresh.
+    initializeAuth() {
       if (this.isHydrated) {
-        return
+        return Promise.resolve(this.user)
       }
 
-      const session = readStoredSession()
-
-      if (session) {
-        this.user = session.user ?? null
-        this.role = session.role ?? null
+      if (authStatePromise) {
+        return authStatePromise
       }
 
-      this.isHydrated = true
-    },
+      this.isLoading = true
+      this.error = ''
 
-    login({ username, email, firstName = '', lastName = '', role = DEFAULT_ROLE }) {
-      const normalizedUser = {
-        username: username?.trim() || email,
-        email: email?.trim() || '',
-        firstName: firstName?.trim() || '',
-        lastName: lastName?.trim() || '',
-      }
+      authStatePromise = new Promise((resolve) => {
+        unsubscribeAuthState = onAuthStateChanged(
+          firebaseAuth,
+          async (firebaseUser) => {
+            try {
+              if (firebaseUser) {
+                await this.loadUserProfile(firebaseUser)
+              } else {
+                this.user = null
+                this.role = DEFAULT_ROLE
+              }
+            } catch (error) {
+              this.user = null
+              this.role = DEFAULT_ROLE
+              this.error = getAuthErrorMessage(error)
+            }
 
-      this.user = normalizedUser
-      this.role = role
-      this.isHydrated = true
-
-      writeStoredSession({
-        user: this.user,
-        role: this.role,
+            this.isHydrated = true
+            this.isLoading = false
+            resolve(this.user)
+          },
+          (error) => {
+            this.user = null
+            this.role = DEFAULT_ROLE
+            this.error = error.message
+            this.isHydrated = true
+            this.isLoading = false
+            resolve(null)
+          },
+        )
       })
+
+      return authStatePromise
     },
 
-    logout() {
-      this.user = null
-      this.role = null
-      this.isHydrated = true
+    // Backward-compatible wrapper for current route/layout callers.
+    hydrate() {
+      return this.initializeAuth()
+    },
 
-      writeStoredSession(null)
+    // Clears the last auth error before a new login/signup attempt.
+    clearError() {
+      this.error = ''
+    },
+
+    // Loads or creates the Firestore profile for the signed-in Firebase user.
+    async loadUserProfile(firebaseUser) {
+      if (!firebaseUser) {
+        this.user = null
+        this.role = DEFAULT_ROLE
+        return null
+      }
+
+      const userRef = doc(db, 'users', firebaseUser.uid)
+      const userSnapshot = await getDoc(userRef)
+      let profile = createUserProfileFromFirebaseUser(
+        firebaseUser,
+        userSnapshot.exists() ? userSnapshot.data() : {},
+      )
+
+      if (!userSnapshot.exists()) {
+        await setDoc(userRef, profile)
+      }
+
+      this.user = profile
+      this.role = profile.role
+      this.isHydrated = true
+      this.error = ''
+
+      return profile
+    },
+
+    // Creates the Firebase Auth account, then writes the app-specific Firestore profile.
+    async signup({ username, email, password }) {
+      this.isLoading = true
+      this.error = ''
+
+      try {
+        const credential = await createUserWithEmailAndPassword(firebaseAuth, email, password)
+        const profile = createUserProfileFromSignup({
+          uid: credential.user.uid,
+          username,
+          email: credential.user.email ?? email,
+        })
+
+        await setDoc(doc(db, 'users', credential.user.uid), profile)
+
+        this.user = profile
+        this.role = profile.role
+        this.isHydrated = true
+
+        return profile
+      } catch (error) {
+        this.error = getAuthErrorMessage(error)
+        throw error
+      } finally {
+        this.isLoading = false
+      }
+    },
+
+    // Signs in with Firebase Auth, then loads the app-specific Firestore profile.
+    async login({ email, password }) {
+      this.isLoading = true
+      this.error = ''
+
+      try {
+        const credential = await signInWithEmailAndPassword(firebaseAuth, email, password)
+        return await this.loadUserProfile(credential.user)
+      } catch (error) {
+        this.error = getAuthErrorMessage(error)
+        throw error
+      } finally {
+        this.isLoading = false
+      }
+    },
+
+    // Updates the signed-in user's Firestore profile and refreshes the Pinia snapshot.
+    async updateUserProfile(profileUpdates) {
+      if (!this.user?.uid) {
+        this.error = 'You must be signed in to update your profile.'
+        throw new Error(this.error)
+      }
+
+      this.isLoading = true
+      this.error = ''
+
+      try {
+        const updatedProfile = {
+          ...this.user,
+          ...profileUpdates,
+          uid: this.user.uid,
+          email: this.user.email,
+          updatedAt: new Date().toISOString(),
+        }
+
+        await setDoc(doc(db, 'users', this.user.uid), updatedProfile, { merge: true })
+
+        this.user = updatedProfile
+        this.role = updatedProfile.role
+
+        return updatedProfile
+      } catch (error) {
+        this.error = error?.message ?? 'Profile update failed. Please try again.'
+        throw error
+      } finally {
+        this.isLoading = false
+      }
+    },
+
+    // Fully removes the Firestore profile and the signed-in Firebase Auth account.
+    async deleteCurrentUser() {
+      const currentUser = firebaseAuth.currentUser
+
+      if (!this.user?.uid || !currentUser) {
+        this.error = 'You must be signed in to delete your account.'
+        throw new Error(this.error)
+      }
+
+      this.isLoading = true
+      this.error = ''
+
+      try {
+        await deleteDoc(doc(db, 'users', this.user.uid))
+        await deleteUser(currentUser)
+
+        this.user = null
+        this.role = DEFAULT_ROLE
+        this.isHydrated = true
+      } catch (error) {
+        this.error = getAuthErrorMessage(error)
+        throw error
+      } finally {
+        this.isLoading = false
+      }
+    },
+
+    // Signs out of Firebase Auth and clears the local Pinia auth snapshot.
+    async logout() {
+      this.isLoading = true
+      this.error = ''
+
+      try {
+        await signOut(firebaseAuth)
+      } finally {
+        this.user = null
+        this.role = DEFAULT_ROLE
+        this.isHydrated = true
+        this.isLoading = false
+        authStatePromise = null
+
+        if (unsubscribeAuthState) {
+          unsubscribeAuthState()
+          unsubscribeAuthState = null
+        }
+      }
     },
   },
 })

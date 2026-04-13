@@ -1,11 +1,12 @@
-export const DEFAULT_ROLE = '<undefined>'
 export const USER_ROLES = Object.freeze({
+  UNDEFINED: '<undefined>',
   STUDENT: 'student',
   GROUP_LEADER: 'group_leader',
   TUTOR: 'tutor',
   INSTRUCTOR: 'instructor',
   ADMIN: 'admin',
 })
+export const DEFAULT_ROLE = USER_ROLES.UNDEFINED
 
 export const GROUP_ROLES = Object.freeze({
   MEMBER: 'member',

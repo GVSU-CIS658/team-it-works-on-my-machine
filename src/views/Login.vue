@@ -24,30 +24,60 @@ function isValidEmailAddress(value) {
 }
 
 function openPanel(panelName) {
+  auth.clearError()
   activePanel.value = panelName
 }
 
 function closePanel() {
+  auth.clearError()
   activePanel.value = null
 }
 
-function loginInDevelopmentMode() {
-  auth.login({
-    username: 'Develop Mode',
-    firstName: 'Develop',
-    lastName: 'Mode',
-    email: 'developer@test.com',
-  })
-
-  const redirectTarget = typeof route.query.redirect === 'string'
+function getRedirectTarget() {
+  return typeof route.query.redirect === 'string'
     ? route.query.redirect
     : '/dashboard'
-
-  router.push(redirectTarget)
 }
 
-function saveSignupPlaceholder() {
+async function loginWithEmail() {
+  auth.clearError()
+
+  if (!email.value.trim() || !password.value) {
+    auth.error = 'Email and password are required.'
+    return
+  }
+
+  try {
+    await auth.login({
+      email: email.value.trim(),
+      password: password.value,
+    })
+
+    router.push(getRedirectTarget())
+  } catch {
+    // The auth store maps Firebase errors into auth.error for display.
+  }
+}
+
+async function signupWithEmail() {
+  auth.clearError()
   const normalizedEmail = signupEmail.value.trim()
+  const normalizedUsername = signupUsername.value.trim()
+
+  if (!normalizedUsername) {
+    auth.error = 'Username is required.'
+    return
+  }
+
+  if (!signupPassword.value) {
+    auth.error = 'Password is required.'
+    return
+  }
+
+  if (signupPassword.value.length < 6) {
+    auth.error = 'Password should be at least 6 characters.'
+    return
+  }
 
   if (!normalizedEmail) {
     signupEmailError.value = 'Email is required.'
@@ -61,7 +91,18 @@ function saveSignupPlaceholder() {
 
   signupEmail.value = normalizedEmail
   signupEmailError.value = ''
-  closePanel()
+
+  try {
+    await auth.signup({
+      username: normalizedUsername,
+      email: normalizedEmail,
+      password: signupPassword.value,
+    })
+
+    router.push(getRedirectTarget())
+  } catch {
+    // The auth store maps Firebase errors into auth.error for display.
+  }
 }
 </script>
 
@@ -75,10 +116,10 @@ function saveSignupPlaceholder() {
       </span>
       <h1>Welcome</h1>
       <div class="login-actions">
-        <v-btn class="button-pill login-action-button" variant="flat" @click="openPanel('login')">
+        <v-btn class="button-pill login-action-button" variant="flat" :disabled="auth.isLoading" @click="openPanel('login')">
           Login
         </v-btn>
-        <v-btn class="button-pill login-action-button" variant="flat" @click="openPanel('signup')">
+        <v-btn class="button-pill login-action-button" variant="flat" :disabled="auth.isLoading" @click="openPanel('signup')">
           Signup
         </v-btn>
       </div>
@@ -132,11 +173,18 @@ function saveSignupPlaceholder() {
             Forgot Password
           </v-btn>
         </div>
+        <p v-if="auth.error && activePanel === 'login'" class="login-error-message">
+          {{ auth.error }}
+        </p>
         <div class="login-primary-actions">
-          <v-btn class="button-pill login-action-button login-primary-action-button" variant="flat" @click="loginInDevelopmentMode">
+          <v-btn
+            class="button-pill login-action-button login-primary-action-button"
+            variant="flat"
+            :loading="auth.isLoading"
+            @click="loginWithEmail">
             Login
           </v-btn>
-          <v-btn class="button-pill login-action-button login-primary-action-button" variant="flat" @click="closePanel">
+          <v-btn class="button-pill login-action-button login-primary-action-button" variant="flat" :disabled="auth.isLoading" @click="closePanel">
             Cancel
           </v-btn>
         </div>
@@ -203,13 +251,20 @@ function saveSignupPlaceholder() {
           </div>
         </div>
         <div class="signup-actions">
-          <v-btn class="button-pill login-action-button signup-action-button" variant="flat" @click="saveSignupPlaceholder">
+          <v-btn
+            class="button-pill login-action-button signup-action-button"
+            variant="flat"
+            :loading="auth.isLoading"
+            @click="signupWithEmail">
             Save
           </v-btn>
-          <v-btn class="button-pill login-action-button signup-action-button" variant="flat" @click="closePanel">
+          <v-btn class="button-pill login-action-button signup-action-button" variant="flat" :disabled="auth.isLoading" @click="closePanel">
             Cancel
           </v-btn>
         </div>
+        <p v-if="auth.error && activePanel === 'signup'" class="login-error-message">
+          {{ auth.error }}
+        </p>
       </div>
 
       <section class="login-card login-card--image" aria-label="Application preview">
