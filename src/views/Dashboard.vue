@@ -78,7 +78,7 @@
                 variant="text"
                 class="dashboard-icon-button"
                 aria-label="Delete Task"
-                @click="deleteTask()">
+                @click="deleteTask(n.id, n.user)">
                 <v-icon icon="mdi-trash-can-outline" />
               </v-btn>
             </div>
@@ -129,7 +129,7 @@ const auth = useAuthStore()
 const username = computed(() => auth.username || auth.user?.firstName)
 const taskStore = DashboardTask();
 const tasks = computed(() => taskStore.tasks);
-const {addTask, init} = taskStore;
+const {addTask, init, deleteTask} = taskStore;
 
 const alphabetSortIcon = computed(() => (
   selectedTaskSort.value === TASK_SORT_OPTIONS.ALPHABET && selectedTaskSortDirection.value === 'descending'
@@ -215,9 +215,6 @@ function editTask(){
   console.log("edit Task here");
 }
 
-function deleteTask(){
-  console.log("delete task here");
-}
 init();
 
 

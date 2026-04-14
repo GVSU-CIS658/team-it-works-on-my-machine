@@ -9,6 +9,9 @@ import {
     onSnapshot,
     query,
     where,
+    querySnapshotFromJSON,
+    deleteDoc,
+    doc
 } from "firebase/firestore";
 import { User } from "firebase/auth"
 
@@ -86,6 +89,21 @@ export const DashboardTask = defineStore("DashboardTask", {
         },
         updateTask(id: number, user: string) {
 
+        },
+
+        deleteTask(id: number, user: string) {
+            const myTasks = collection(db, "Tasks");
+            const q1 = where("id", "==", id);
+            const q2 = where("user", "==", user);
+            const qr = query(myTasks, q1, q2);
+            getDocs(qr).then((qs: QuerySnapshot) => {
+                qs.forEach(async (qd: QueryDocumentSnapshot) => {
+
+                    const myDoc = doc(db, "Tasks/" + qd.id);
+                    console.log(qd.id);
+                    await deleteDoc(myDoc);
+                })
+            })
         },
 
         filterTask(option: TaskFilterOption) {
