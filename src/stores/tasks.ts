@@ -14,6 +14,7 @@ import {
     doc
 } from "firebase/firestore";
 import { User } from "firebase/auth"
+import { stringConcat } from 'firebase/firestore/pipelines';
 
 
 type Task = {
@@ -39,24 +40,29 @@ export const TASK_SORT_OPTIONS = Object.freeze({
     ALPHABET: 'alphabet',
 });
 
+const user = "";
+
 type TaskFilterOption = typeof TASK_FILTER_OPTIONS[keyof typeof TASK_FILTER_OPTIONS];
 type TaskSortOption = typeof TASK_SORT_OPTIONS[keyof typeof TASK_SORT_OPTIONS];
 
 
 export const DashboardTask = defineStore("DashboardTask", {
     state: () => ({
+        user: user,
         tasks: [] as Task[],
         filteredTasks: [] as Task[],
         myFilter: TASK_FILTER_OPTIONS.ALL as TaskFilterOption,
 
+
     }),
     actions: {
-        init() {
+        init(user: string) {
+            this.user = user;
             if (this.tasks.length > 0) return;
             const myTasks = collection(db, "Tasks");
 
 
-            const taskQuery = query(myTasks, where("user", "==", "test"));
+            const taskQuery = query(myTasks, where("user", "==", this.user));
             getDocs(taskQuery).then((qs: QuerySnapshot) => {
                 qs.forEach((qd: QueryDocumentSnapshot) => {
                     const data = qd.data() as Task;
@@ -68,12 +74,10 @@ export const DashboardTask = defineStore("DashboardTask", {
             this.filterTask(TASK_FILTER_OPTIONS.ALL);
 
         },
-        addTask(task: string, id: number, user: string) {
+        addTask(task: string, id: number) {
             if (task == "") return;
-            user = "test";
-
             const newTask = {
-                user,
+                user: this.user,
                 id,
                 description: task,
                 isCompleted: false,

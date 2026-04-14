@@ -189,7 +189,7 @@ function setTaskSort(sortOption: string) {
 
 function addingTask(message:string, id:number){
   selectedTaskSort.value = TASK_SORT_OPTIONS.NONE;
-addTask(message, id, 'COOL BEAN');
+addTask(message, id);
 }
 
 type Group = {
@@ -215,7 +215,7 @@ function editTask(){
   console.log("edit Task here");
 }
 
-init();
+init(auth.emailAddress);
 
 
 </script>
