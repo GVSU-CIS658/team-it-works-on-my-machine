@@ -17,7 +17,7 @@
             class="button-pill dashboard-task-icon-button"
             variant="flat"
             aria-label="Add task"
-            @click="addTask(message, tasks.length, 'COOL BEAN')">
+            @click="addingTask(message, tasks.length)">
             <v-icon icon="mdi-plus" />
           </v-btn>
           <v-btn
@@ -116,11 +116,6 @@ import { computed, ref } from 'vue'
 import { type Task, DashboardTask, TASK_FILTER_OPTIONS, TASK_SORT_OPTIONS,} from '../stores/tasks'
 import { useAuthStore } from '../stores/auth'
 
-enum taskState {
-  read,
-  edit,
-  finish
-}
 
 var message:string ="";
 const ONE_WEEK_IN_MILLISECONDS = 7 * 24 * 60 * 60 * 1000;
@@ -135,6 +130,7 @@ const username = computed(() => auth.username || auth.user?.firstName)
 const taskStore = DashboardTask();
 const tasks = computed(() => taskStore.tasks);
 const {addTask, init} = taskStore;
+
 const alphabetSortIcon = computed(() => (
   selectedTaskSort.value === TASK_SORT_OPTIONS.ALPHABET && selectedTaskSortDirection.value === 'descending'
     ? 'mdi-sort-alphabetical-descending'
@@ -145,6 +141,7 @@ const dateSortIcon = computed(() => (
     ? 'mdi-sort-calendar-descending'
     : 'mdi-sort-calendar-ascending'
 ));
+
 const visibleTasks = computed(() => {
   const now = Date.now();
   const oneWeekFromNow = now + ONE_WEEK_IN_MILLISECONDS;
@@ -172,7 +169,9 @@ const visibleTasks = computed(() => {
       return a.description.localeCompare(b.description) * sortDirection;
     }
 
-    return (a.date.getTime() - b.date.getTime()) * sortDirection;
+    if(selectedTaskSort.value === TASK_SORT_OPTIONS.DATE){return (a.date.getTime() - b.date.getTime()) * sortDirection;}
+
+    return;
   });
 });
 
@@ -186,6 +185,11 @@ function setTaskSort(sortOption: string) {
 
   selectedTaskSort.value = sortOption;
   selectedTaskSortDirection.value = 'ascending';
+}
+
+function addingTask(message:string, id:number){
+  selectedTaskSort.value = TASK_SORT_OPTIONS.NONE;
+addTask(message, id, 'COOL BEAN');
 }
 
 type Group = {

@@ -31,6 +31,7 @@ export const TASK_FILTER_OPTIONS = Object.freeze({
 });
 
 export const TASK_SORT_OPTIONS = Object.freeze({
+    NONE: 'none',
     DATE: 'date',
     ALPHABET: 'alphabet',
 });
@@ -79,8 +80,9 @@ export const DashboardTask = defineStore("DashboardTask", {
 
             const myTasks = collection(db, "Tasks");
             addDoc(myTasks, { ...newTask, date: newTask.date.toString() });
-            this.tasks.push(newTask);
-            this.filterTask(TASK_FILTER_OPTIONS.ALL);
+            this.tasks.splice(0, 0, newTask);
+            console.log(this.tasks);
+            //this.filterTask(TASK_FILTER_OPTIONS.ALL);
         },
         updateTask(id: number, user: string) {
 
@@ -99,7 +101,6 @@ export const DashboardTask = defineStore("DashboardTask", {
                     break;
             }
 
-            //   this.tasks.sort((a, b) => b.date.getDate() - a.date.getDate());
         }
     },
 });
