@@ -52,6 +52,7 @@ export const DashboardTask = defineStore("DashboardTask", {
         tasks: [] as Task[],
         filteredTasks: [] as Task[],
         myFilter: TASK_FILTER_OPTIONS.ALL as TaskFilterOption,
+        unsubscribe: null as any,
 
 
     }),
@@ -61,15 +62,17 @@ export const DashboardTask = defineStore("DashboardTask", {
             if (this.tasks.length > 0) return;
             const myTasks = collection(db, "Tasks");
 
-
             const taskQuery = query(myTasks, where("user", "==", this.user));
-            getDocs(taskQuery).then((qs: QuerySnapshot) => {
-                qs.forEach((qd: QueryDocumentSnapshot) => {
-                    const data = qd.data() as Task;
-                    console.log(data.date);
-                    data.date = new Date(data.date);
-                    this.tasks.push(data);
-                })
+
+            this.unsubscribe = onSnapshot(taskQuery, (qs: QuerySnapshot) => {
+                this.tasks = [];
+                getDocs(taskQuery).then((qs: QuerySnapshot) => {
+                    qs.forEach((qd: QueryDocumentSnapshot) => {
+                        const data = qd.data() as Task;
+                        data.date = new Date(data.date);
+                        this.tasks.push(data);
+                    })
+                });
             });
             this.filterTask(TASK_FILTER_OPTIONS.ALL);
 
@@ -88,7 +91,6 @@ export const DashboardTask = defineStore("DashboardTask", {
             const myTasks = collection(db, "Tasks");
             addDoc(myTasks, { ...newTask, date: newTask.date.toString() });
             this.tasks.splice(0, 0, newTask);
-            console.log(this.tasks);
             //this.filterTask(TASK_FILTER_OPTIONS.ALL);
         },
         updateTask(id: number, user: string) {
@@ -102,9 +104,7 @@ export const DashboardTask = defineStore("DashboardTask", {
             const qr = query(myTasks, q1, q2);
             getDocs(qr).then((qs: QuerySnapshot) => {
                 qs.forEach(async (qd: QueryDocumentSnapshot) => {
-
                     const myDoc = doc(db, "Tasks/" + qd.id);
-                    console.log(qd.id);
                     await deleteDoc(myDoc);
                 })
             })

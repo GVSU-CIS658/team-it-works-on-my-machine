@@ -112,7 +112,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onUnmounted, ref } from 'vue'
 import { type Task, DashboardTask, TASK_FILTER_OPTIONS, TASK_SORT_OPTIONS,} from '../stores/tasks'
 import { useAuthStore } from '../stores/auth'
 
@@ -217,6 +217,7 @@ function editTask(){
 
 init(auth.emailAddress);
 
+onUnmounted(()=>taskStore.unsubscribe)
 
 </script>
 
