@@ -86,6 +86,10 @@
         </ul>
       </nav>
       </div>
+      <v-dialog
+      v-model="editing"
+
+      >COOL</v-dialog>
       <div class="dashboard-border">
 
         <RouterLink to="/Groups" class="dashboard-header">
@@ -116,7 +120,7 @@ import { computed, onUnmounted, ref } from 'vue'
 import { type Task, DashboardTask, TASK_FILTER_OPTIONS, TASK_SORT_OPTIONS,} from '../stores/tasks'
 import { useAuthStore } from '../stores/auth'
 
-
+var editing=false;
 var message:string ="";
 const ONE_WEEK_IN_MILLISECONDS = 7 * 24 * 60 * 60 * 1000;
 const taskFilterOptions = Object.values(TASK_FILTER_OPTIONS);
