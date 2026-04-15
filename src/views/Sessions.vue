@@ -134,9 +134,9 @@ function deleteSession(id: string) {
   <div class="sessions-view">
 
     <!-- Header -->
-    <div class="sessions-header">
-      <p>Sessions</p>
-      <h1>Plan and manage shared study sessions.</h1>
+    <div class="sessions-header page-hero">
+      <h1>Sessions</h1>
+      <h2>Plan and manage shared study sessions.</h2>
       <p>Select a group to view upcoming sessions, create new ones, or remove ones you created.</p>
     </div>
 
