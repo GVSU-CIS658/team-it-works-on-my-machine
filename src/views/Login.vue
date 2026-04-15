@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import desktopImage from '../assets/images/desktop.png'
+import googleIcon from '../assets/images/google-g.svg'
 import { useAuthStore } from '../stores/auth'
 
 const auth = useAuthStore()
@@ -51,8 +52,41 @@ async function loginWithEmail() {
     await auth.login({
       email: email.value.trim(),
       password: password.value,
+      rememberMe: rememberMe.value,
     })
 
+    router.push(getRedirectTarget())
+  } catch {
+    // The auth store maps Firebase errors into auth.error for display.
+  }
+}
+
+async function sendPasswordReset() {
+  auth.clearError()
+  const normalizedEmail = email.value.trim()
+
+  if (!normalizedEmail) {
+    auth.error = 'Enter your email first.'
+    return
+  }
+
+  if (!isValidEmailAddress(normalizedEmail)) {
+    auth.error = 'Enter a valid email address.'
+    return
+  }
+
+  try {
+    await auth.sendPasswordReset(normalizedEmail)
+  } catch {
+    // The auth store maps Firebase errors into auth.error for display.
+  }
+}
+
+async function loginWithGoogle() {
+  auth.clearError()
+
+  try {
+    await auth.loginWithGoogle()
     router.push(getRedirectTarget())
   } catch {
     // The auth store maps Firebase errors into auth.error for display.
@@ -169,12 +203,19 @@ async function signupWithEmail() {
             density="comfortable"
             hide-details
           />
-          <v-btn class="login-forgot-button" variant="text">
+          <v-btn
+            class="login-forgot-button"
+            variant="text"
+            :disabled="auth.isLoading"
+            @click="sendPasswordReset">
             Forgot Password
           </v-btn>
         </div>
         <p v-if="auth.error && activePanel === 'login'" class="login-error-message">
           {{ auth.error }}
+        </p>
+        <p v-if="auth.message && activePanel === 'login'" class="login-success-message">
+          {{ auth.message }}
         </p>
         <div class="login-primary-actions">
           <v-btn
@@ -192,17 +233,13 @@ async function signupWithEmail() {
           <span>OR CONTINUE WITH</span>
         </div>
         <div class="login-social-row" aria-label="Social login options">
-          <v-btn class="login-social-button" icon variant="text" aria-label="Facebook">
-            <v-icon icon="mdi-facebook" />
-          </v-btn>
-          <v-btn class="login-social-button" icon variant="text" aria-label="Twitter">
-            <v-icon icon="mdi-twitter" />
-          </v-btn>
-          <v-btn class="login-social-button" icon variant="text" aria-label="Instagram">
-            <v-icon icon="mdi-instagram" />
-          </v-btn>
-          <v-btn class="login-social-button" icon variant="text" aria-label="Google">
-            <v-icon icon="mdi-google" />
+          <v-btn
+            class="button-pill login-google-button"
+            variant="flat"
+            aria-label="Continue with Google"
+            :loading="auth.isLoading"
+            @click="loginWithGoogle">
+            <img class="login-provider-icon" :src="googleIcon" alt="Continue with Google" />
           </v-btn>
         </div>
       </div>
