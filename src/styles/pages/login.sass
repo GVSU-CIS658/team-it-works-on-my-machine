@@ -104,6 +104,13 @@
   font-weight: 700
   text-align: center
 
+.login-success-message
+  width: var(--login-form-width)
+  margin: -0.75rem 0 0
+  color: #166534
+  font-weight: 700
+  text-align: center
+
 .signup-actions
   width: var(--login-form-width)
   display: flex
@@ -139,8 +146,23 @@
   span
     padding: 0 0.85rem
 
-.login-social-button
-  color: var(--main-primary)
+.login-google-button
+  min-width: 0
+  width: 12rem
+  height: 3rem
+  display: inline-flex
+  align-items: center
+  justify-content: center
+  padding: 0
+  overflow: hidden
+  background: transparent
+  box-shadow: none
+
+.login-provider-icon
+  width: 100%
+  height: 100%
+  display: block
+  object-fit: contain
 
 .login-forgot-button
   min-width: auto

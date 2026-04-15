@@ -75,8 +75,7 @@ async function confirmDeleteProfile() {
           </div>
           <div>
             <dt>Email</dt>
-            <dd v-if="!isEditing">{{ profile.email }}</dd>
-            <v-text-field v-else v-model="draftProfile.email" variant="outlined" density="comfortable" hide-details />
+            <dd>{{ profile.email }}</dd>
           </div>
           <div>
             <dt>First Name</dt>

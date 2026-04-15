@@ -1,9 +1,15 @@
 import { defineStore } from 'pinia'
 import {
+  browserLocalPersistence,
+  browserSessionPersistence,
   createUserWithEmailAndPassword,
   deleteUser,
+  GoogleAuthProvider,
   onAuthStateChanged,
+  sendPasswordResetEmail,
+  setPersistence,
   signInWithEmailAndPassword,
+  signInWithPopup,
   signOut,
 } from 'firebase/auth'
 import { deleteDoc, doc, getDoc, setDoc } from 'firebase/firestore'
@@ -17,6 +23,7 @@ import {
 
 let authStatePromise = null
 let unsubscribeAuthState = null
+const googleProvider = new GoogleAuthProvider()
 
 function getAuthErrorMessage(error) {
   switch (error?.code) {
@@ -44,6 +51,7 @@ export const useAuthStore = defineStore('auth', {
     isHydrated: false,
     isLoading: false,
     error: '',
+    message: '',
   }),
 
   getters: {
@@ -109,6 +117,7 @@ export const useAuthStore = defineStore('auth', {
     // Clears the last auth error before a new login/signup attempt.
     clearError() {
       this.error = ''
+      this.message = ''
     },
 
     // Loads or creates the Firestore profile for the signed-in Firebase user.
@@ -166,13 +175,52 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    // Signs in with Firebase Auth, then loads the app-specific Firestore profile.
-    async login({ email, password }) {
+    // Sets browser persistence based on Remember Me, then signs in with Firebase Auth.
+    async login({ email, password, rememberMe = true }) {
       this.isLoading = true
       this.error = ''
 
       try {
+        await setPersistence(
+          firebaseAuth,
+          rememberMe ? browserLocalPersistence : browserSessionPersistence,
+        )
+
         const credential = await signInWithEmailAndPassword(firebaseAuth, email, password)
+        return await this.loadUserProfile(credential.user)
+      } catch (error) {
+        this.error = getAuthErrorMessage(error)
+        throw error
+      } finally {
+        this.isLoading = false
+      }
+    },
+
+    // Sends a Firebase password reset email without revealing whether the email exists.
+    async sendPasswordReset(email) {
+      this.isLoading = true
+      this.error = ''
+      this.message = ''
+
+      try {
+        await sendPasswordResetEmail(firebaseAuth, email)
+        this.message = 'If an account exists for that email, a reset link has been sent.'
+      } catch (error) {
+        this.error = getAuthErrorMessage(error)
+        throw error
+      } finally {
+        this.isLoading = false
+      }
+    },
+
+    // Signs in with Google, then loads or creates the app-specific Firestore profile.
+    async loginWithGoogle() {
+      this.isLoading = true
+      this.error = ''
+      this.message = ''
+
+      try {
+        const credential = await signInWithPopup(firebaseAuth, googleProvider)
         return await this.loadUserProfile(credential.user)
       } catch (error) {
         this.error = getAuthErrorMessage(error)
