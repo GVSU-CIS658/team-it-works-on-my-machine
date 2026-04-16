@@ -1,164 +1,163 @@
-import { defineStore } from 'pinia';
-import db from "../services/firebase";
-import {
-    collection,
-    getDocs,
-    addDoc,
-    QuerySnapshot,
-    QueryDocumentSnapshot,
-    onSnapshot,
-    query,
-    where,
-    querySnapshotFromJSON,
-    deleteDoc,
-    doc
-} from "firebase/firestore";
-import { User } from "firebase/auth"
-import { stringConcat } from 'firebase/firestore/pipelines';
+import { defineStore } from 'pinia'
+import { collection, onSnapshot, query, where, type QueryDocumentSnapshot } from 'firebase/firestore'
+import { httpsCallable } from 'firebase/functions'
 
+import { db, functions } from '../services/firebase'
 
 type Task = {
-    user: string,
-    id: number,
-    description: string;
-    date: Date;
-    isCompleted: boolean;
-    isHidden: boolean;
+  id: string
+  ownerId: string
+  description: string
+  date: Date
+  dueAt: string
+  isCompleted: boolean
+  isHidden: boolean
+  createdAt?: string
+  updatedAt?: string
+}
+
+type TaskPayload = {
+  id: string
+  ownerId: string
+  description: string
+  dueAt?: string
+  date?: string
+  isCompleted?: boolean
+  isHidden?: boolean
+  createdAt?: string
+  updatedAt?: string
+}
+
+type TaskUpdates = {
+  description?: string
+  dueAt?: string
+  isCompleted?: boolean
+  isHidden?: boolean
 }
 
 export const TASK_FILTER_OPTIONS = Object.freeze({
-    ALL: 'all',
-    FINISHED: 'finished',
-    UNFINISHED: 'unfinished',
-    SOONER: 'sooner',
-    LATER: 'later',
-});
+  ALL: 'all',
+  FINISHED: 'finished',
+  UNFINISHED: 'unfinished',
+  SOONER: 'sooner',
+  LATER: 'later',
+})
 
 export const TASK_SORT_OPTIONS = Object.freeze({
-    NONE: 'none',
-    DATE: 'date',
-    ALPHABET: 'alphabet',
-});
+  NONE: 'none',
+  DATE: 'date',
+  ALPHABET: 'alphabet',
+})
 
-const user = "";
+type TaskFilterOption = typeof TASK_FILTER_OPTIONS[keyof typeof TASK_FILTER_OPTIONS]
+type TaskSortOption = typeof TASK_SORT_OPTIONS[keyof typeof TASK_SORT_OPTIONS]
 
-type TaskFilterOption = typeof TASK_FILTER_OPTIONS[keyof typeof TASK_FILTER_OPTIONS];
-type TaskSortOption = typeof TASK_SORT_OPTIONS[keyof typeof TASK_SORT_OPTIONS];
+const createTaskFunction = httpsCallable(functions, 'createTask')
+const updateTaskFunction = httpsCallable(functions, 'updateTask')
+const deleteTaskFunction = httpsCallable(functions, 'deleteTask')
 
+function toTask(document: QueryDocumentSnapshot): Task {
+  const data = document.data() as TaskPayload
+  const dueAt = data.dueAt ?? data.date ?? new Date().toISOString()
 
-export const DashboardTask = defineStore("DashboardTask", {
-    state: () => ({
-        user: user,
-        tasks: [] as Task[],
-        filteredTasks: [] as Task[],
-        myFilter: TASK_FILTER_OPTIONS.ALL as TaskFilterOption,
-        unsubscribe: null as any,
+  return {
+    id: document.id,
+    ownerId: data.ownerId,
+    description: data.description,
+    date: new Date(dueAt),
+    dueAt,
+    isCompleted: Boolean(data.isCompleted),
+    isHidden: Boolean(data.isHidden),
+    createdAt: data.createdAt,
+    updatedAt: data.updatedAt,
+  }
+}
 
+export const DashboardTask = defineStore('DashboardTask', {
+  state: () => ({
+    ownerId: '',
+    tasks: [] as Task[],
+    filteredTasks: [] as Task[],
+    myFilter: TASK_FILTER_OPTIONS.ALL as TaskFilterOption,
+    unsubscribe: null as null | (() => void),
+    error: '',
+  }),
 
-    }),
-    actions: {
-        init(user: string) {
-            this.user = user;
-            if (this.tasks.length > 0) return;
-            const myTasks = collection(db, "Tasks");
+  actions: {
+    init(ownerId: string) {
+      if (!ownerId) {
+        return
+      }
 
-            const taskQuery = query(myTasks, where("user", "==", this.user));
+      if (this.ownerId === ownerId && this.unsubscribe) {
+        return
+      }
 
-            this.unsubscribe = onSnapshot(taskQuery, (qs: QuerySnapshot) => {
-                this.tasks = [];
-                qs.forEach((qd: QueryDocumentSnapshot) => {
-                    const data = qd.data() as Task;
-                    data.date = new Date(data.date);
-                    this.tasks.push(data);
-                })
-            }, () => {
-                this.tasks = [];
-                this.unsubscribe = null;
-            });
-            this.filterTask(TASK_FILTER_OPTIONS.ALL);
+      if (this.unsubscribe) {
+        this.unsubscribe()
+        this.unsubscribe = null
+      }
 
+      this.ownerId = ownerId
+      this.error = ''
+
+      const taskQuery = query(
+        collection(db, 'Tasks'),
+        where('ownerId', '==', this.ownerId),
+      )
+
+      this.unsubscribe = onSnapshot(
+        taskQuery,
+        (snapshot) => {
+          this.tasks = snapshot.docs.map(toTask)
         },
-        addTask(task: string, id: number) {
-            if (task == "") return;
-            const newTask = {
-                user: this.user,
-                id,
-                description: task,
-                isCompleted: false,
-                isHidden: false,
-                date: new Date(),
-            }
-
-            const myTasks = collection(db, "Tasks");
-            addDoc(myTasks, { ...newTask, date: newTask.date.toString() });
-            this.tasks.splice(0, 0, newTask);
-            //this.filterTask(TASK_FILTER_OPTIONS.ALL);
+        (error) => {
+          this.error = error.message
+          this.tasks = []
+          this.unsubscribe = null
         },
-        updateTask(id: number, user: string) {
-
-        },
-
-        deleteTask(id: number, user: string) {
-            const myTasks = collection(db, "Tasks");
-            const q1 = where("id", "==", id);
-            const q2 = where("user", "==", user);
-            const qr = query(myTasks, q1, q2);
-            getDocs(qr).then((qs: QuerySnapshot) => {
-                qs.forEach(async (qd: QueryDocumentSnapshot) => {
-                    const myDoc = doc(db, "Tasks/" + qd.id);
-                    await deleteDoc(myDoc);
-                })
-            })
-        },
-
-        filterTask(option: TaskFilterOption) {
-            this.myFilter = option;
-            switch (this.myFilter) {
-                case TASK_FILTER_OPTIONS.SOONER:
-
-                    this.tasks.sort((a, b) => b.date.getDate() - a.date.getDate());
-                    break;
-
-                default:
-                    this.tasks.sort((a, b) => b.date.getDate() - a.date.getDate());
-                    break;
-            }
-
-        }
+      )
     },
-});
+
+    async addTask(description: string, dueAt?: string) {
+      const normalizedDescription = description.trim()
+
+      if (!normalizedDescription) {
+        return
+      }
+
+      await createTaskFunction({
+        description: normalizedDescription,
+        dueAt: dueAt ?? new Date().toISOString(),
+      })
+    },
+
+    async updateTask(taskId: string, updates: TaskUpdates) {
+      if (!taskId) {
+        return
+      }
+
+      await updateTaskFunction({
+        taskId,
+        ...updates,
+      })
+    },
+
+    async deleteTask(taskId: string) {
+      if (!taskId) {
+        return
+      }
+
+      await deleteTaskFunction({ taskId })
+    },
+
+    filterTask(option: TaskFilterOption) {
+      this.myFilter = option
+    },
+  },
+})
 
 export type { TaskFilterOption }
 export type { TaskSortOption }
-
+export type { TaskUpdates }
 export type { Task }
-
-
-// let testTask: Task[] = [
-//                 {
-//                     user: "test",
-//                     id: 0,
-//                     description: "Eat breakfast!",
-//                     date: new Date("February 01, 2025"),
-//                     isCompleted: false,
-//                     isHidden: false,
-//                 }
-//                 ,
-//                 {
-//                     user: "test",
-//                     id: 1,
-//                     description: "Do push Up",
-//                     date: new Date("March 01, 2025"),
-//                     isCompleted: true,
-//                     isHidden: false,
-//                 },
-//                 {
-//                     user: "test",
-//                     id: 2,
-//                     description: "working",
-//                     date: new Date("March 01, 2025"),
-//                     isCompleted: true,
-//                     isHidden: false,
-//                 }
-//             ]
-//             testTask.forEach(x => { addDoc(myTasks, x) });

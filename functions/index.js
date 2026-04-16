@@ -104,3 +104,137 @@ exports.deleteUserProfile = onCall(CALLABLE_OPTIONS, async (request) => {
     uid,
   }
 })
+
+function requireAuth(request) {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'You must be signed in.')
+  }
+
+  return request.auth.uid
+}
+
+function normalizeTaskUpdates(data, currentTask = {}) {
+  const updates = {}
+
+  if (typeof data.description === 'string') {
+    const description = data.description.trim()
+
+    if (!description) {
+      throw new HttpsError('invalid-argument', 'Task description is required.')
+    }
+
+    updates.description = description
+  }
+
+  if (typeof data.dueAt === 'string') {
+    const dueAt = new Date(data.dueAt)
+
+    if (Number.isNaN(dueAt.getTime())) {
+      throw new HttpsError('invalid-argument', 'Task date is invalid.')
+    }
+
+    updates.dueAt = dueAt.toISOString()
+  }
+
+  if (typeof data.isCompleted === 'boolean') {
+    updates.isCompleted = data.isCompleted
+  }
+
+  if (typeof data.isHidden === 'boolean') {
+    updates.isHidden = data.isHidden
+  }
+
+  return {
+    ...currentTask,
+    ...updates,
+    updatedAt: new Date().toISOString(),
+  }
+}
+
+// Creates a task owned by the signed-in user.
+exports.createTask = onCall(CALLABLE_OPTIONS, async (request) => {
+  const ownerId = requireAuth(request)
+  const data = request.data ?? {}
+  const now = new Date().toISOString()
+  const task = normalizeTaskUpdates(
+    {
+      description: data.description,
+      dueAt: data.dueAt ?? now,
+      isCompleted: false,
+      isHidden: false,
+    },
+    {
+      ownerId,
+      createdAt: now,
+    },
+  )
+  const taskRef = await db.collection('Tasks').add(task)
+
+  return {
+    id: taskRef.id,
+    ...task,
+  }
+})
+
+// Updates a task only when it belongs to the signed-in user.
+exports.updateTask = onCall(CALLABLE_OPTIONS, async (request) => {
+  const ownerId = requireAuth(request)
+  const taskId = request.data?.taskId
+
+  if (typeof taskId !== 'string' || !taskId) {
+    throw new HttpsError('invalid-argument', 'Task id is required.')
+  }
+
+  const taskRef = db.collection('Tasks').doc(taskId)
+  const taskSnapshot = await taskRef.get()
+
+  if (!taskSnapshot.exists) {
+    throw new HttpsError('not-found', 'Task was not found.')
+  }
+
+  const currentTask = taskSnapshot.data()
+
+  if (currentTask.ownerId !== ownerId) {
+    throw new HttpsError('permission-denied', 'You can only update your own tasks.')
+  }
+
+  const updatedTask = normalizeTaskUpdates(request.data ?? {}, currentTask)
+
+  await taskRef.set(updatedTask, { merge: true })
+
+  return {
+    id: taskId,
+    ...updatedTask,
+  }
+})
+
+// Deletes a task only when it belongs to the signed-in user.
+exports.deleteTask = onCall(CALLABLE_OPTIONS, async (request) => {
+  const ownerId = requireAuth(request)
+  const taskId = request.data?.taskId
+
+  if (typeof taskId !== 'string' || !taskId) {
+    throw new HttpsError('invalid-argument', 'Task id is required.')
+  }
+
+  const taskRef = db.collection('Tasks').doc(taskId)
+  const taskSnapshot = await taskRef.get()
+
+  if (!taskSnapshot.exists) {
+    return {
+      ok: true,
+      taskId,
+    }
+  }
+
+  if (taskSnapshot.data().ownerId !== ownerId) {
+    throw new HttpsError('permission-denied', 'You can only delete your own tasks.')
+  }
+
+  await taskRef.delete()
+
+  return {
+    ok: true,
+    taskId,
+  }
+})
