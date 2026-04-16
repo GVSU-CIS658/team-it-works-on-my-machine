@@ -70,7 +70,7 @@
                 variant="text"
                 class="dashboard-icon-button"
                 aria-label="Edit task"
-                @click="editTask()">
+                @click.stop="editTask(n)">
                 <v-icon icon="mdi-pencil" />
               </v-btn>
                   <v-btn
@@ -86,10 +86,26 @@
         </ul>
       </nav>
       </div>
+
       <v-dialog
       v-model="editing"
+      max-width="400"
+      max-height="500">
+      <div  class="dashboard-pop">
+      <v-card-title>Edit Task</v-card-title>
+      <div class="dashboard-pad">
+        <input label="Edit Task" class="dashboard-input" v-model="editTaskMessage"></input>
+      </div>
+      
+      <v-card-title>Date</v-card-title>
+       <v-text-field type="date" placeholder={{ editTaskDate }} v-model="editTaskDate"></v-text-field>        
+      <div class="m-8">
+      <v-btn class="button-pill dashboard-row-action" variant="flat" @click="updateTask()">SAVE</v-btn>
+      <v-btn class="button-pill dashboard-row-action" variant="flat" @click="updateTask()">CANCEL</v-btn>
+      </div>  
+    </div>
 
-      >COOL</v-dialog>
+     </v-dialog>
       <div class="dashboard-border">
 
         <RouterLink to="/Groups" class="dashboard-header">
@@ -116,11 +132,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onUnmounted, ref } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import { type Task, DashboardTask, TASK_FILTER_OPTIONS, TASK_SORT_OPTIONS,} from '../stores/tasks'
 import { useAuthStore } from '../stores/auth'
 
-var editing=false;
+const editing = ref(false)
+var editTaskMessage="";
+const editTaskDate= ref(new Date("December 17, 1995 03:24:00").toDateString());
 var message:string ="";
 const ONE_WEEK_IN_MILLISECONDS = 7 * 24 * 60 * 60 * 1000;
 const taskFilterOptions = Object.values(TASK_FILTER_OPTIONS);
@@ -215,8 +233,17 @@ let groups: Group[]  = [
   }
 ];
 
-function editTask(){
-  console.log("edit Task here");
+
+function editTask(selectedTask:Task){
+  editing.value = true;
+  console.log(editing);
+  editTaskMessage = selectedTask.description;
+//editTaskDate.value = selectedTask.date;
+}
+
+function updateTask(){
+  editing.value = false;
+  console.log(editing);
 }
 
 init(auth.emailAddress);
