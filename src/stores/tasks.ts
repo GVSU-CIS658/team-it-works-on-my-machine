@@ -66,13 +66,14 @@ export const DashboardTask = defineStore("DashboardTask", {
 
             this.unsubscribe = onSnapshot(taskQuery, (qs: QuerySnapshot) => {
                 this.tasks = [];
-                getDocs(taskQuery).then((qs: QuerySnapshot) => {
-                    qs.forEach((qd: QueryDocumentSnapshot) => {
-                        const data = qd.data() as Task;
-                        data.date = new Date(data.date);
-                        this.tasks.push(data);
-                    })
-                });
+                qs.forEach((qd: QueryDocumentSnapshot) => {
+                    const data = qd.data() as Task;
+                    data.date = new Date(data.date);
+                    this.tasks.push(data);
+                })
+            }, () => {
+                this.tasks = [];
+                this.unsubscribe = null;
             });
             this.filterTask(TASK_FILTER_OPTIONS.ALL);
 

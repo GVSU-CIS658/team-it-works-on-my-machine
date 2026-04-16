@@ -248,7 +248,12 @@ function updateTask(){
 
 init(auth.emailAddress);
 
-onUnmounted(()=>taskStore.unsubscribe)
+onUnmounted(() => {
+  if (taskStore.unsubscribe) {
+    taskStore.unsubscribe();
+    taskStore.unsubscribe = null;
+  }
+})
 
 </script>
 

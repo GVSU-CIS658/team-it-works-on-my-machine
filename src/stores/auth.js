@@ -13,17 +13,17 @@ import {
   signOut,
 } from 'firebase/auth'
 import { deleteDoc, doc, getDoc, setDoc } from 'firebase/firestore'
+import { httpsCallable } from 'firebase/functions'
 
-import { auth as firebaseAuth, db } from '../services/firebase'
-import {
-  DEFAULT_ROLE,
-  createUserProfileFromFirebaseUser,
-  createUserProfileFromSignup,
-} from '../models/user'
+import { auth as firebaseAuth, db, functions } from '../services/firebase'
+import { DEFAULT_ROLE, createUserProfileFromFirebaseUser } from '../models/user'
 
 let authStatePromise = null
 let unsubscribeAuthState = null
 const googleProvider = new GoogleAuthProvider()
+const createUserProfileFunction = httpsCallable(functions, 'createUserProfile')
+const updateUserProfileFunction = httpsCallable(functions, 'updateUserProfile')
+const deleteUserProfileFunction = httpsCallable(functions, 'deleteUserProfile')
 
 function getAuthErrorMessage(error) {
   switch (error?.code) {
@@ -42,6 +42,11 @@ function getAuthErrorMessage(error) {
     default:
       return error?.message ?? 'Authentication failed. Please try again.'
   }
+}
+
+async function createBackendUserProfile(username) {
+  const response = await createUserProfileFunction({ username })
+  return response.data
 }
 
 export const useAuthStore = defineStore('auth', {
@@ -130,14 +135,9 @@ export const useAuthStore = defineStore('auth', {
 
       const userRef = doc(db, 'users', firebaseUser.uid)
       const userSnapshot = await getDoc(userRef)
-      let profile = createUserProfileFromFirebaseUser(
-        firebaseUser,
-        userSnapshot.exists() ? userSnapshot.data() : {},
-      )
-
-      if (!userSnapshot.exists()) {
-        await setDoc(userRef, profile)
-      }
+      const profile = userSnapshot.exists()
+        ? createUserProfileFromFirebaseUser(firebaseUser, userSnapshot.data())
+        : await createBackendUserProfile()
 
       this.user = profile
       this.role = profile.role
@@ -147,20 +147,14 @@ export const useAuthStore = defineStore('auth', {
       return profile
     },
 
-    // Creates the Firebase Auth account, then writes the app-specific Firestore profile.
+    // Creates the Firebase Auth account, then asks the backend to create the app profile.
     async signup({ username, email, password }) {
       this.isLoading = true
       this.error = ''
 
       try {
-        const credential = await createUserWithEmailAndPassword(firebaseAuth, email, password)
-        const profile = createUserProfileFromSignup({
-          uid: credential.user.uid,
-          username,
-          email: credential.user.email ?? email,
-        })
-
-        await setDoc(doc(db, 'users', credential.user.uid), profile)
+        await createUserWithEmailAndPassword(firebaseAuth, email, password)
+        const profile = await createBackendUserProfile(username)
 
         this.user = profile
         this.role = profile.role
@@ -230,7 +224,7 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    // Updates the signed-in user's Firestore profile and refreshes the Pinia snapshot.
+    // Asks the backend to update editable profile fields and refreshes the Pinia snapshot.
     async updateUserProfile(profileUpdates) {
       if (!this.user?.uid) {
         this.error = 'You must be signed in to update your profile.'
@@ -241,15 +235,8 @@ export const useAuthStore = defineStore('auth', {
       this.error = ''
 
       try {
-        const updatedProfile = {
-          ...this.user,
-          ...profileUpdates,
-          uid: this.user.uid,
-          email: this.user.email,
-          updatedAt: new Date().toISOString(),
-        }
-
-        await setDoc(doc(db, 'users', this.user.uid), updatedProfile, { merge: true })
+        const response = await updateUserProfileFunction(profileUpdates)
+        const updatedProfile = response.data
 
         this.user = updatedProfile
         this.role = updatedProfile.role
@@ -276,7 +263,7 @@ export const useAuthStore = defineStore('auth', {
       this.error = ''
 
       try {
-        await deleteDoc(doc(db, 'users', this.user.uid))
+        await deleteUserProfileFunction()
         await deleteUser(currentUser)
 
         this.user = null

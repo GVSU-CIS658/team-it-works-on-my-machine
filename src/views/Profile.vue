@@ -2,14 +2,13 @@
 import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
-import { STUDY_MAJORS, USER_ROLES, createEmptyUserProfile } from '../models/user'
+import { STUDY_MAJORS, createEmptyUserProfile } from '../models/user'
 import { useAuthStore } from '../stores/auth'
 
 const auth = useAuthStore()
 const router = useRouter()
 const isEditing = ref(false)
 const isDeleting = ref(false)
-const roleOptions = Object.values(USER_ROLES)
 const studyMajorOptions = Object.values(STUDY_MAJORS)
 
 const profile = computed(() => auth.user ?? createEmptyUserProfile())
@@ -101,15 +100,7 @@ async function confirmDeleteProfile() {
           </div>
           <div>
             <dt>Role</dt>
-            <dd v-if="!isEditing">{{ profile.role }}</dd>
-            <v-select
-              v-else
-              v-model="draftProfile.role"
-              :items="roleOptions"
-              variant="outlined"
-              density="comfortable"
-              hide-details
-            />
+            <dd>{{ profile.role }}</dd>
           </div>
         </dl>
         <p v-if="auth.error && !isDeleting" class="profile-error-message">
