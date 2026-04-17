@@ -114,15 +114,15 @@
             type="date"
             aria-label="Edit task date"
           />
-          <div class="m-8">
+          <div class="dashboard-option">
             <v-btn
-              class="button-pill dashboard-row-action"
+              class="button-pill dashboard-row-action dashboard-option"
               variant="flat"
               @click="saveTaskEdits">
               SAVE
             </v-btn>
             <v-btn
-              class="button-pill dashboard-row-action"
+              class="button-pill dashboard-row-action dashboard-option"
               variant="flat"
               @click="cancelTaskEdit">
               CANCEL
