@@ -7,10 +7,8 @@
   const auth = useAuthStore()
   const router = useRouter()
 
-  auth.hydrate()
-
-  function logout() {
-    auth.logout()
+  async function logout() {
+    await auth.logout()
     router.push('/login')
   }
 </script>
@@ -40,7 +38,7 @@
               aria-label="Current user"
               v-bind="props">
               <v-icon icon="mdi-account-circle" aria-hidden="true" />
-              <span>{{ auth.displayName }}</span>
+              <span>{{ auth.username }}</span>
             </div>
           </template>
 

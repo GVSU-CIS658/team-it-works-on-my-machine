@@ -5,8 +5,8 @@ import { useRoute } from 'vue-router'
 import AuthLayout from './components/AuthLayout.vue'
 import SiteLayout from './components/SiteLayout.vue'
 
-const route = useRoute()
-const activeLayout = computed(() => route.meta.layout ?? 'site')
+const route = useRoute();
+const activeLayout = computed(() => route.meta.layout ?? 'site');
 </script>
 
 <template>

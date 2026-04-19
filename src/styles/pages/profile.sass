@@ -62,6 +62,12 @@
   font-size: 1.25rem
   color: var(--intro-primary)
 
+.profile-error-message
+  margin: 1rem 0 0
+  color: var(--hero-error)
+  font-weight: 700
+  text-align: center
+
 .profile-actions
   margin-top: 1.5rem
   display: flex
@@ -74,11 +80,55 @@
   align-items: center
   justify-content: center
 
-:deep(.profile-action-button .v-btn__content)
+.profile-delete-action-button
+  background: #dc2626
+  color: #fff
+
+.profile-delete-confirmation
+  display: grid
+  gap: 1.5rem
+  text-align: center
+
+  p
+    margin: 0
+    color: var(--intro-primary)
+    font-size: 1.35rem
+    font-weight: 700
+    line-height: 1.5
+
+.profile-delete-error
+  color: var(--hero-error)
+
+.profile-delete-actions
+  display: grid
+  justify-content: center
+  gap: 1rem
+
+.profile-delete-button
+  min-width: 16rem
+  display: inline-flex
+  align-items: center
+  justify-content: center
+
+.profile-delete-button--confirm
+  background: #facc15
+  color: #1f2937
+
+.profile-delete-button--cancel
+  background: #22c55e
+  color: #052e16
+
+:deep(.profile-action-button .v-btn__content),
+:deep(.profile-delete-button .v-btn__content)
   width: 100%
   display: flex
   justify-content: center
   align-items: center
+  text-align: center
+
+:deep(.profile-delete-action-button.v-btn)
+  background: #dc2626
+  color: #fff
 
 @media (max-width: 720px)
   .profile-view

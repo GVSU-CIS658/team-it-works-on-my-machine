@@ -1,0 +1,16 @@
+rules_version = '2';
+
+// Deploy rule changes with: firebase deploy --only firestore:rules
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if false;
+    }
+
+    match /Tasks/{taskId} {
+      allow read: if request.auth != null && resource.data.ownerId == request.auth.uid;
+      allow write: if false;
+    }
+  }
+}
