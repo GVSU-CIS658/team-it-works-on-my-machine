@@ -3,8 +3,8 @@
     <div class="head">
       <h1>Welcome back, {{ username }}.</h1>
       <p>
-        Use the dashboard as the landing view for progress, upcoming work, and
-        group activity.
+        Use the dashboard as the landing view for tasks, group activity, and
+        upcoming sessions.
       </p>
     </div>
 
@@ -146,9 +146,7 @@
           <h2>Upcoming Sessions</h2>
         </RouterLink>
         <ul>
-          <li>Show the next five sessions in chronological order.</li>
-          <li>Include meeting location or join link.</li>
-          <li>Surface RSVP or attendance actions if needed later.</li>
+          <li>There is no upcoming sessions.</li>
         </ul>
       </div>
     </div>
@@ -284,14 +282,9 @@ type Group = {
 
 const groups: Group[] = [
   {
-    title: 'Math',
-    description: 'Math is hard',
+    title: 'You are not in a group',
+    description: 'You are not in a group',
     numberOfPeople: 3,
-  },
-  {
-    title: 'Science',
-    description: 'Speed is in fact relative',
-    numberOfPeople: 10,
   },
 ]
 
