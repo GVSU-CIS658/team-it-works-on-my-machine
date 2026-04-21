@@ -1,77 +1,234 @@
 import { defineStore } from 'pinia'
+import { collection, onSnapshot, query, where } from 'firebase/firestore'
+import { httpsCallable } from 'firebase/functions'
 
-function createGroup(name) {
-  const trimmedName = name.trim()
+import { db, functions } from '../services/firebase'
 
-  return {
-    id: `group-${Date.now()}`,
-    name: trimmedName,
-    joinCode: trimmedName.toLowerCase().replace(/\s+/g, '-'),
-  }
-}
+const createGroupFunction = httpsCallable(functions, 'createGroup')
+const joinGroupFunction = httpsCallable(functions, 'joinGroup')
+const leaveGroupFunction = httpsCallable(functions, 'leaveGroup')
+const deleteGroupFunction = httpsCallable(functions, 'deleteGroup')
+const createGroupPostFunction = httpsCallable(functions, 'createGroupPost')
 
 export const useGroupsStore = defineStore('groups', {
   state: () => ({
+    ownerId: '',
     userGroups: [],
-    activeGroup: null,
+    activeGroupId: '',
     groupFeed: [],
     isLoading: false,
+    error: '',
+    unsubscribe: null,
+    feedUnsubscribe: null,
   }),
-
-  actions: {
-    createGroup(name) {
-      const group = createGroup(name)
-
-      this.userGroups.push(group)
-      this.activeGroup = group
+  getters: {
+    activeGroup(state) {
+      return state.userGroups.find((group) => group.id === state.activeGroupId) ?? null
     },
+    isActiveGroupOwner(state) {
+      const activeGroup = state.userGroups.find((group) => group.id === state.activeGroupId)
+      return Boolean(activeGroup && activeGroup.ownerId === state.ownerId)
+    },
+  },
+  actions: {
+    upsertGroup(group) {
+      const existingIndex = this.userGroups.findIndex((currentGroup) => currentGroup.id === group.id)
 
-    joinGroup(joinCode) {
-      const normalizedJoinCode = joinCode.trim()
+      if (existingIndex >= 0) {
+        this.userGroups.splice(existingIndex, 1, group)
+      } else {
+        this.userGroups.push(group)
+      }
 
-      if (!normalizedJoinCode) {
+      this.userGroups.sort((left, right) => left.name.localeCompare(right.name))
+    },
+    init(ownerId) {
+      if (!ownerId) {
+        this.reset()
         return
       }
 
-      const existingGroup = this.userGroups.find(
-        (group) => group.joinCode === normalizedJoinCode,
+      if (this.ownerId === ownerId && this.unsubscribe) {
+        return
+      }
+
+      this.resetListener()
+      this.ownerId = ownerId
+      this.isLoading = true
+      this.error = ''
+
+      const groupsQuery = query(
+        collection(db, 'groups'),
+        where('memberIds', 'array-contains', ownerId),
       )
 
-      if (existingGroup) {
-        this.activeGroup = existingGroup
-        return
-      }
+      this.unsubscribe = onSnapshot(
+        groupsQuery,
+        (snapshot) => {
+          this.userGroups = snapshot.docs
+            .map((docSnapshot) => ({
+              id: docSnapshot.id,
+              ...docSnapshot.data(),
+            }))
+            .sort((left, right) => left.name.localeCompare(right.name))
 
-      const group = {
-        id: `joined-${Date.now()}`,
-        name: `Joined ${normalizedJoinCode}`,
-        joinCode: normalizedJoinCode,
-      }
+          if (!this.userGroups.length) {
+            this.activeGroupId = ''
+          } else if (!this.userGroups.some((group) => group.id === this.activeGroupId)) {
+            this.activeGroupId = this.userGroups[0].id
+          }
 
-      this.userGroups.push(group)
-      this.activeGroup = group
+          this.syncActiveGroupFeed()
+          this.isLoading = false
+        },
+        (error) => {
+          console.error(error)
+          this.error = 'Unable to load groups right now.'
+          this.isLoading = false
+        },
+      )
     },
+    resetListener() {
+      if (typeof this.unsubscribe === 'function') {
+        this.unsubscribe()
+      }
 
-    leaveGroup(groupId) {
-      this.userGroups = this.userGroups.filter((group) => group.id !== groupId)
+      this.unsubscribe = null
+    },
+    resetFeedListener() {
+      if (typeof this.feedUnsubscribe === 'function') {
+        this.feedUnsubscribe()
+      }
+
+      this.feedUnsubscribe = null
+    },
+    reset() {
+      this.resetListener()
+      this.resetFeedListener()
+      this.ownerId = ''
+      this.userGroups = []
+      this.activeGroupId = ''
       this.groupFeed = []
+      this.isLoading = false
+      this.error = ''
+    },
+    setActiveGroup(groupId) {
+      this.activeGroupId = groupId
+      this.error = ''
+      this.syncActiveGroupFeed()
+    },
+    clearError() {
+      this.error = ''
+    },
+    async createGroup(groupDetails) {
+      this.error = ''
 
-      if (this.activeGroup?.id === groupId) {
-        this.activeGroup = this.userGroups[0] ?? null
+      try {
+        const response = await createGroupFunction(groupDetails)
+        const group = response.data
+        this.upsertGroup(group)
+        this.activeGroupId = group.id
+        return group
+      } catch (error) {
+        console.error(error)
+        this.error = error.message || 'Unable to create the group.'
+        throw error
       }
     },
+    async joinGroup(joinCode) {
+      this.error = ''
 
-    createPost(content) {
-      if (!this.activeGroup) {
+      try {
+        const response = await joinGroupFunction({
+          joinCode: joinCode.trim().toUpperCase(),
+        })
+
+        const group = response.data
+        this.upsertGroup(group)
+        this.activeGroupId = group.id
+        return group
+      } catch (error) {
+        console.error(error)
+        this.error = error.message || 'Unable to join the group.'
+        throw error
+      }
+    },
+    async leaveGroup(groupId) {
+      this.error = ''
+
+      try {
+        await leaveGroupFunction({ groupId })
+        this.userGroups = this.userGroups.filter((group) => group.id !== groupId)
+
+        if (this.activeGroupId === groupId) {
+          this.activeGroupId = ''
+        }
+      } catch (error) {
+        console.error(error)
+        this.error = error.message || 'Unable to leave the group.'
+        throw error
+      }
+    },
+    async deleteGroup(groupId) {
+      this.error = ''
+
+      try {
+        await deleteGroupFunction({ groupId })
+        this.userGroups = this.userGroups.filter((group) => group.id !== groupId)
+
+        if (this.activeGroupId === groupId) {
+          this.activeGroupId = ''
+        }
+      } catch (error) {
+        console.error(error)
+        this.error = error.message || 'Unable to delete the group.'
+        throw error
+      }
+    },
+    syncActiveGroupFeed() {
+      this.resetFeedListener()
+
+      if (!this.activeGroupId) {
+        this.groupFeed = []
         return
       }
 
-      this.groupFeed.unshift({
-        id: `post-${Date.now()}`,
-        groupId: this.activeGroup.id,
-        content: content.trim(),
-        createdAt: new Date().toISOString(),
-      })
+      const groupFeedQuery = query(
+        collection(db, 'groupFeed'),
+        where('groupId', '==', this.activeGroupId),
+      )
+
+      this.feedUnsubscribe = onSnapshot(
+        groupFeedQuery,
+        (snapshot) => {
+          this.groupFeed = snapshot.docs
+            .map((docSnapshot) => ({
+              id: docSnapshot.id,
+              ...docSnapshot.data(),
+            }))
+            .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+        },
+        (error) => {
+          console.error(error)
+          this.error = 'Unable to load the group feed right now.'
+        },
+      )
+    },
+    async createPost(postDetails) {
+      this.error = ''
+
+      try {
+        const response = await createGroupPostFunction({
+          groupId: this.activeGroupId,
+          ...postDetails,
+        })
+
+        return response.data
+      } catch (error) {
+        console.error(error)
+        this.error = error.message || 'Unable to post to the group feed.'
+        throw error
+      }
     },
   },
 })

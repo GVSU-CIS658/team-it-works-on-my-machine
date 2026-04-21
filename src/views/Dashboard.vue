@@ -137,7 +137,11 @@
         </RouterLink>
 
         <ul>
-          <li v-for="group in groups" :key="group.title">{{ group.title }}</li>
+          <li v-if="groupsStore.isLoading">Loading groups...</li>
+          <li v-else-if="!groups.length">You are not in any groups yet.</li>
+          <li v-for="group in groups" v-else :key="group.id">
+            {{ group.name }}
+          </li>
         </ul>
       </div>
 
@@ -157,6 +161,7 @@
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { type Task, DashboardTask, TASK_FILTER_OPTIONS, TASK_SORT_OPTIONS } from '../stores/tasks'
 import { useAuthStore } from '../stores/auth'
+import { useGroupsStore } from '../stores/groups'
 
 const editing = ref(false)
 const selectedTaskId = ref('')
@@ -171,9 +176,11 @@ const selectedTaskSortDirection = ref('ascending')
 
 const auth = useAuthStore()
 const taskStore = DashboardTask()
+const groupsStore = useGroupsStore()
 
 const username = computed(() => auth.username || auth.user?.firstName)
 const tasks = computed(() => taskStore.tasks)
+const groups = computed(() => groupsStore.userGroups)
 
 const alphabetSortIcon = computed(() => (
   selectedTaskSort.value === TASK_SORT_OPTIONS.ALPHABET && selectedTaskSortDirection.value === 'descending'
@@ -274,25 +281,12 @@ async function toggleTaskComplete(task: Task, event: Event) {
   })
 }
 
-type Group = {
-  title: string
-  description: string
-  numberOfPeople: number
-}
-
-const groups: Group[] = [
-  {
-    title: 'You are not in a group',
-    description: 'You are not in a group',
-    numberOfPeople: 3,
-  },
-]
-
 watch(
   () => auth.user?.uid,
   (ownerId) => {
     if (ownerId) {
       taskStore.init(ownerId)
+      groupsStore.init(ownerId)
     }
   },
   { immediate: true },
@@ -302,6 +296,16 @@ onUnmounted(() => {
   if (taskStore.unsubscribe) {
     taskStore.unsubscribe()
     taskStore.unsubscribe = null
+  }
+
+  if (groupsStore.unsubscribe) {
+    groupsStore.unsubscribe()
+    groupsStore.unsubscribe = null
+  }
+
+  if (groupsStore.feedUnsubscribe) {
+    groupsStore.feedUnsubscribe()
+    groupsStore.feedUnsubscribe = null
   }
 })
 </script>
