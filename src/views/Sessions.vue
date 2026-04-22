@@ -1,4 +1,4 @@
-<script setup lang="ts">
+git checkout -b feat/amine-sessions<script setup lang="ts">
 import { ref, computed, onUnmounted, watch } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useGroupsStore } from '../stores/groups'
