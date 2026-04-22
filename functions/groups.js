@@ -1,4 +1,5 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https')
+const logger = require('firebase-functions/logger')
 const admin = require('firebase-admin')
 
 const {
@@ -7,12 +8,23 @@ const {
   createGroupPostFromRequest,
   db,
   generateJoinCode,
+  normalizeOptionalString,
   normalizeRequiredString,
   requireAuth,
 } = require('./shared')
 
 const { FieldValue } = admin.firestore
 const MAX_JOIN_CODE_ATTEMPTS = 10
+
+async function getUserSummary(userId) {
+  const userSnapshot = await db.collection('users').doc(userId).get()
+  const user = userSnapshot.exists ? userSnapshot.data() : {}
+
+  return {
+    uid: userId,
+    username: user.username || user.email || userId,
+  }
+}
 
 async function createUniqueJoinCode() {
   for (let attempt = 0; attempt < MAX_JOIN_CODE_ATTEMPTS; attempt += 1) {
@@ -53,10 +65,14 @@ async function removeGroupFromUserProfile(userId, groupId) {
 
 // Creates a group owned by the signed-in user and adds it to their profile membership list.
 const createGroup = onCall(CALLABLE_OPTIONS, async (request) => {
-  requireAuth(request)
+  const userId = requireAuth(request)
+  const ownerSummary = await getUserSummary(userId)
 
   const joinCode = await createUniqueJoinCode()
-  const group = createGroupFromRequest(request, joinCode)
+  const group = {
+    ...createGroupFromRequest(request, joinCode),
+    memberSummaries: [ownerSummary],
+  }
   const groupRef = await db.collection('groups').add(group)
 
   await addGroupToUserProfile(group.ownerId, groupRef.id)
@@ -88,15 +104,21 @@ const joinGroup = onCall(CALLABLE_OPTIONS, async (request) => {
 
   const groupDocument = groupSnapshot.docs[0]
   const group = groupDocument.data()
+  const userSummary = await getUserSummary(userId)
 
   if (!Array.isArray(group.memberIds)) {
     group.memberIds = []
+  }
+
+  if (!Array.isArray(group.memberSummaries)) {
+    group.memberSummaries = []
   }
 
   if (!group.memberIds.includes(userId)) {
     await groupDocument.ref.set(
       {
         memberIds: FieldValue.arrayUnion(userId),
+        memberSummaries: FieldValue.arrayUnion(userSummary),
         updatedAt: new Date().toISOString(),
       },
       { merge: true },
@@ -111,6 +133,9 @@ const joinGroup = onCall(CALLABLE_OPTIONS, async (request) => {
     memberIds: group.memberIds.includes(userId)
       ? group.memberIds
       : [...group.memberIds, userId],
+    memberSummaries: group.memberSummaries.some((member) => member.uid === userId)
+      ? group.memberSummaries
+      : [...group.memberSummaries, userSummary],
   }
 })
 
@@ -139,6 +164,8 @@ const leaveGroup = onCall(CALLABLE_OPTIONS, async (request) => {
   await groupRef.set(
     {
       memberIds: FieldValue.arrayRemove(userId),
+      memberSummaries: (Array.isArray(group.memberSummaries) ? group.memberSummaries : [])
+        .filter((member) => member.uid !== userId),
       updatedAt: new Date().toISOString(),
     },
     { merge: true },
@@ -149,6 +176,49 @@ const leaveGroup = onCall(CALLABLE_OPTIONS, async (request) => {
   return {
     ok: true,
     groupId,
+  }
+})
+
+// Updates the name and description of a group when the signed-in user owns it.
+const updateGroup = onCall(CALLABLE_OPTIONS, async (request) => {
+  const userId = requireAuth(request)
+  const groupId = normalizeRequiredString(request.data?.groupId, 'Group id')
+  const name = normalizeRequiredString(request.data?.name, 'Group name')
+  const description = normalizeOptionalString(request.data?.description)
+  logger.info('updateGroup request received', { groupId, userId })
+
+  const groupRef = db.collection('groups').doc(groupId)
+  const groupSnapshot = await groupRef.get()
+
+  if (!groupSnapshot.exists) {
+    throw new HttpsError('not-found', 'Group was not found.')
+  }
+
+  const group = groupSnapshot.data()
+
+  if (group.ownerId !== userId) {
+    throw new HttpsError('permission-denied', 'Only the group owner can edit the group.')
+  }
+
+  const updatedGroup = {
+    ...group,
+    name,
+    description,
+    updatedAt: new Date().toISOString(),
+  }
+
+  await groupRef.set(
+    {
+      name,
+      description,
+      updatedAt: updatedGroup.updatedAt,
+    },
+    { merge: true },
+  )
+
+  return {
+    id: groupId,
+    ...updatedGroup,
   }
 })
 
@@ -237,10 +307,90 @@ const createGroupPost = onCall(CALLABLE_OPTIONS, async (request) => {
   }
 })
 
+async function getPostAndGroupForWrite(postId) {
+  const postRef = db.collection('groupFeed').doc(postId)
+  const postSnapshot = await postRef.get()
+
+  if (!postSnapshot.exists) {
+    throw new HttpsError('not-found', 'Post was not found.')
+  }
+
+  const post = postSnapshot.data()
+  const groupRef = db.collection('groups').doc(post.groupId)
+  const groupSnapshot = await groupRef.get()
+
+  if (!groupSnapshot.exists) {
+    throw new HttpsError('not-found', 'Group was not found.')
+  }
+
+  return {
+    postRef,
+    post,
+    group: groupSnapshot.data(),
+  }
+}
+
+// Updates a feed post when the signed-in user created it or owns the parent group.
+const updateGroupPost = onCall(CALLABLE_OPTIONS, async (request) => {
+  const userId = requireAuth(request)
+  const postId = normalizeRequiredString(request.data?.postId, 'Post id')
+  const title = normalizeRequiredString(request.data?.title, 'Post title')
+  const body = normalizeRequiredString(request.data?.body, 'Post body')
+  logger.info('updateGroupPost request received', { postId, userId })
+
+  const { postRef, post, group } = await getPostAndGroupForWrite(postId)
+  const canEditPost = post.createdBy === userId || group.ownerId === userId
+
+  if (!canEditPost) {
+    throw new HttpsError('permission-denied', 'You do not have permission to edit this post.')
+  }
+
+  const updatedAt = new Date().toISOString()
+
+  await postRef.set(
+    {
+      title,
+      body,
+      updatedAt,
+    },
+    { merge: true },
+  )
+
+  return {
+    id: postId,
+    ...post,
+    title,
+    body,
+    updatedAt,
+  }
+})
+
+// Deletes a feed post when the signed-in user created it or owns the parent group.
+const deleteGroupPost = onCall(CALLABLE_OPTIONS, async (request) => {
+  const userId = requireAuth(request)
+  const postId = normalizeRequiredString(request.data?.postId, 'Post id')
+  const { postRef, post, group } = await getPostAndGroupForWrite(postId)
+  const canDeletePost = post.createdBy === userId || group.ownerId === userId
+
+  if (!canDeletePost) {
+    throw new HttpsError('permission-denied', 'You do not have permission to delete this post.')
+  }
+
+  await postRef.delete()
+
+  return {
+    ok: true,
+    postId,
+  }
+})
+
 module.exports = {
   createGroup,
   joinGroup,
   leaveGroup,
+  updateGroup,
   deleteGroup,
   createGroupPost,
+  updateGroupPost,
+  deleteGroupPost,
 }

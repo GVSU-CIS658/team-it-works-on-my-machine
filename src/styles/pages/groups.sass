@@ -71,6 +71,20 @@
     background: rgba(59, 130, 246, 0.12)
     border-radius: 8px
 
+.group-members-tooltip
+  min-width: 10rem
+
+  &__title
+    font-weight: 700
+    margin-bottom: 0.35rem
+
+  ul
+    margin: 0
+    padding-left: 1rem
+
+  li
+    margin: 0.15rem 0
+
 .groups-stage
   color: var(--body-text)
   padding: 1.5rem
@@ -103,6 +117,17 @@
   p
     margin: 0
     opacity: 0.8
+
+  :deep(.v-input)
+    width: 100%
+
+  :deep(.v-field__input)
+    text-align: left
+
+.groups-edit-actions
+  display: flex
+  gap: 0.75rem
+  align-items: center
 
 .groups-join-code
   font-weight: 700
@@ -148,6 +173,31 @@
   background: rgba(255, 255, 255, 0.5)
   border-color: rgba(15, 23, 42, 0.08)
   width: 100%
+
+  .feed-post-header
+    display: flex
+    align-items: flex-start
+    justify-content: space-between
+    gap: 0.75rem
+    padding: 0 1rem
+
+    :deep(.v-input)
+      flex: 1
+      margin-top: 0.5rem
+
+    .feed-post-actions
+      display: flex
+      align-items: center
+      gap: 0.25rem
+
+  .feed-post-edit
+    display: flex
+    flex-direction: column
+    gap: 0.75rem
+    padding: 0 1rem 1rem
+
+    :deep(.v-input)
+      margin-top: 0.25rem
 
   :deep(.v-card-title),
   :deep(.v-card-subtitle),

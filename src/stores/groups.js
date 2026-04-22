@@ -7,8 +7,11 @@ import { db, functions } from '../services/firebase'
 const createGroupFunction = httpsCallable(functions, 'createGroup')
 const joinGroupFunction = httpsCallable(functions, 'joinGroup')
 const leaveGroupFunction = httpsCallable(functions, 'leaveGroup')
+const updateGroupFunction = httpsCallable(functions, 'updateGroup')
 const deleteGroupFunction = httpsCallable(functions, 'deleteGroup')
 const createGroupPostFunction = httpsCallable(functions, 'createGroupPost')
+const updateGroupPostFunction = httpsCallable(functions, 'updateGroupPost')
+const deleteGroupPostFunction = httpsCallable(functions, 'deleteGroupPost')
 
 export const useGroupsStore = defineStore('groups', {
   state: () => ({
@@ -169,6 +172,24 @@ export const useGroupsStore = defineStore('groups', {
         throw error
       }
     },
+    async updateGroup(groupId, groupDetails) {
+      this.error = ''
+
+      try {
+        const response = await updateGroupFunction({
+          groupId,
+          ...groupDetails,
+        })
+
+        const group = response.data
+        this.upsertGroup(group)
+        return group
+      } catch (error) {
+        console.error(error)
+        this.error = error.message || 'Unable to update the group.'
+        throw error
+      }
+    },
     async deleteGroup(groupId) {
       this.error = ''
 
@@ -227,6 +248,39 @@ export const useGroupsStore = defineStore('groups', {
       } catch (error) {
         console.error(error)
         this.error = error.message || 'Unable to post to the group feed.'
+        throw error
+      }
+    },
+    async updatePost(postId, postDetails) {
+      this.error = ''
+
+      try {
+        const response = await updateGroupPostFunction({
+          postId,
+          ...postDetails,
+        })
+
+        const updatedPost = response.data
+        this.groupFeed = this.groupFeed.map((post) => (
+          post.id === postId ? updatedPost : post
+        ))
+
+        return updatedPost
+      } catch (error) {
+        console.error(error)
+        this.error = error.message || 'Unable to update the post.'
+        throw error
+      }
+    },
+    async deletePost(postId) {
+      this.error = ''
+
+      try {
+        await deleteGroupPostFunction({ postId })
+        this.groupFeed = this.groupFeed.filter((post) => post.id !== postId)
+      } catch (error) {
+        console.error(error)
+        this.error = error.message || 'Unable to delete the post.'
         throw error
       }
     },
