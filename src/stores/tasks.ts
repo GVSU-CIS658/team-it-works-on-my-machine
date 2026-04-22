@@ -84,6 +84,10 @@ export const DashboardTask = defineStore('DashboardTask', {
   }),
 
   actions: {
+    clearError() {
+      this.error = ''
+    },
+
     init(ownerId: string) {
       if (!ownerId) {
         return
@@ -126,10 +130,17 @@ export const DashboardTask = defineStore('DashboardTask', {
         return
       }
 
-      await createTaskFunction({
-        description: normalizedDescription,
-        dueAt: dueAt ?? new Date().toISOString(),
-      })
+      this.error = ''
+
+      try {
+        await createTaskFunction({
+          description: normalizedDescription,
+          dueAt: dueAt ?? new Date().toISOString(),
+        })
+      } catch (error: any) {
+        this.error = error?.message || 'Unable to create the task.'
+        throw error
+      }
     },
 
     async updateTask(taskId: string, updates: TaskUpdates) {
@@ -137,10 +148,17 @@ export const DashboardTask = defineStore('DashboardTask', {
         return
       }
 
-      await updateTaskFunction({
-        taskId,
-        ...updates,
-      })
+      this.error = ''
+
+      try {
+        await updateTaskFunction({
+          taskId,
+          ...updates,
+        })
+      } catch (error: any) {
+        this.error = error?.message || 'Unable to update the task.'
+        throw error
+      }
     },
 
     async deleteTask(taskId: string) {
@@ -148,7 +166,14 @@ export const DashboardTask = defineStore('DashboardTask', {
         return
       }
 
-      await deleteTaskFunction({ taskId })
+      this.error = ''
+
+      try {
+        await deleteTaskFunction({ taskId })
+      } catch (error: any) {
+        this.error = error?.message || 'Unable to delete the task.'
+        throw error
+      }
     },
 
     filterTask(option: TaskFilterOption) {

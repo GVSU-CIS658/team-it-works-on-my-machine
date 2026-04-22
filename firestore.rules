@@ -31,5 +31,10 @@ service cloud.firestore {
       allow read: if isGroupMember(resource.data.groupId);
       allow write: if false;
     }
+
+    match /sessions/{sessionId} {
+      allow read: if isGroupMember(resource.data.groupId);
+      allow write: if false;
+    }
   }
 }

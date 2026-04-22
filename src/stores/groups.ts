@@ -4,17 +4,65 @@ import { httpsCallable } from 'firebase/functions'
 
 import { db, functions } from '../services/firebase'
 
-const createGroupFunction = httpsCallable(functions, 'createGroup')
-const joinGroupFunction = httpsCallable(functions, 'joinGroup')
-const leaveGroupFunction = httpsCallable(functions, 'leaveGroup')
-const updateGroupFunction = httpsCallable(functions, 'updateGroup')
-const deleteGroupFunction = httpsCallable(functions, 'deleteGroup')
-const createGroupPostFunction = httpsCallable(functions, 'createGroupPost')
-const updateGroupPostFunction = httpsCallable(functions, 'updateGroupPost')
-const deleteGroupPostFunction = httpsCallable(functions, 'deleteGroupPost')
+type MemberSummary = {
+  uid: string
+  username: string
+}
+
+type Group = {
+  id: string
+  name: string
+  description: string
+  joinCode: string
+  ownerId: string
+  memberIds: string[]
+  memberSummaries?: MemberSummary[]
+  createdAt?: string
+  updatedAt?: string
+}
+
+type GroupPost = {
+  id: string
+  groupId: string
+  title: string
+  body: string
+  createdBy: string
+  createdAt: string
+  updatedAt?: string
+}
+
+type GroupDetails = {
+  name: string
+  description?: string
+}
+
+type GroupPostDetails = {
+  title: string
+  body: string
+}
+
+type GroupsState = {
+  ownerId: string
+  userGroups: Group[]
+  activeGroupId: string
+  groupFeed: GroupPost[]
+  isLoading: boolean
+  error: string
+  unsubscribe: null | (() => void)
+  feedUnsubscribe: null | (() => void)
+}
+
+const createGroupFunction = httpsCallable<GroupDetails, Group>(functions, 'createGroup')
+const joinGroupFunction = httpsCallable<{ joinCode: string }, Group>(functions, 'joinGroup')
+const leaveGroupFunction = httpsCallable<{ groupId: string }, { ok: boolean; groupId: string }>(functions, 'leaveGroup')
+const updateGroupFunction = httpsCallable<{ groupId: string } & GroupDetails, Group>(functions, 'updateGroup')
+const deleteGroupFunction = httpsCallable<{ groupId: string }, { ok: boolean; groupId: string }>(functions, 'deleteGroup')
+const createGroupPostFunction = httpsCallable<{ groupId: string } & GroupPostDetails, GroupPost>(functions, 'createGroupPost')
+const updateGroupPostFunction = httpsCallable<{ postId: string } & GroupPostDetails, GroupPost>(functions, 'updateGroupPost')
+const deleteGroupPostFunction = httpsCallable<{ postId: string }, { ok: boolean; postId: string }>(functions, 'deleteGroupPost')
 
 export const useGroupsStore = defineStore('groups', {
-  state: () => ({
+  state: (): GroupsState => ({
     ownerId: '',
     userGroups: [],
     activeGroupId: '',
@@ -25,16 +73,16 @@ export const useGroupsStore = defineStore('groups', {
     feedUnsubscribe: null,
   }),
   getters: {
-    activeGroup(state) {
+    activeGroup(state): Group | null {
       return state.userGroups.find((group) => group.id === state.activeGroupId) ?? null
     },
-    isActiveGroupOwner(state) {
+    isActiveGroupOwner(state): boolean {
       const activeGroup = state.userGroups.find((group) => group.id === state.activeGroupId)
       return Boolean(activeGroup && activeGroup.ownerId === state.ownerId)
     },
   },
   actions: {
-    upsertGroup(group) {
+    upsertGroup(group: Group) {
       const existingIndex = this.userGroups.findIndex((currentGroup) => currentGroup.id === group.id)
 
       if (existingIndex >= 0) {
@@ -45,7 +93,7 @@ export const useGroupsStore = defineStore('groups', {
 
       this.userGroups.sort((left, right) => left.name.localeCompare(right.name))
     },
-    init(ownerId) {
+    init(ownerId: string) {
       if (!ownerId) {
         this.reset()
         return
@@ -71,7 +119,7 @@ export const useGroupsStore = defineStore('groups', {
           this.userGroups = snapshot.docs
             .map((docSnapshot) => ({
               id: docSnapshot.id,
-              ...docSnapshot.data(),
+              ...(docSnapshot.data() as Omit<Group, 'id'>),
             }))
             .sort((left, right) => left.name.localeCompare(right.name))
 
@@ -115,7 +163,7 @@ export const useGroupsStore = defineStore('groups', {
       this.isLoading = false
       this.error = ''
     },
-    setActiveGroup(groupId) {
+    setActiveGroup(groupId: string) {
       this.activeGroupId = groupId
       this.error = ''
       this.syncActiveGroupFeed()
@@ -123,7 +171,7 @@ export const useGroupsStore = defineStore('groups', {
     clearError() {
       this.error = ''
     },
-    async createGroup(groupDetails) {
+    async createGroup(groupDetails: GroupDetails) {
       this.error = ''
 
       try {
@@ -132,13 +180,13 @@ export const useGroupsStore = defineStore('groups', {
         this.upsertGroup(group)
         this.activeGroupId = group.id
         return group
-      } catch (error) {
+      } catch (error: any) {
         console.error(error)
-        this.error = error.message || 'Unable to create the group.'
+        this.error = error?.message || 'Unable to create the group.'
         throw error
       }
     },
-    async joinGroup(joinCode) {
+    async joinGroup(joinCode: string) {
       this.error = ''
 
       try {
@@ -150,13 +198,13 @@ export const useGroupsStore = defineStore('groups', {
         this.upsertGroup(group)
         this.activeGroupId = group.id
         return group
-      } catch (error) {
+      } catch (error: any) {
         console.error(error)
-        this.error = error.message || 'Unable to join the group.'
+        this.error = error?.message || 'Unable to join the group.'
         throw error
       }
     },
-    async leaveGroup(groupId) {
+    async leaveGroup(groupId: string) {
       this.error = ''
 
       try {
@@ -166,13 +214,13 @@ export const useGroupsStore = defineStore('groups', {
         if (this.activeGroupId === groupId) {
           this.activeGroupId = ''
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error(error)
-        this.error = error.message || 'Unable to leave the group.'
+        this.error = error?.message || 'Unable to leave the group.'
         throw error
       }
     },
-    async updateGroup(groupId, groupDetails) {
+    async updateGroup(groupId: string, groupDetails: GroupDetails) {
       this.error = ''
 
       try {
@@ -184,13 +232,13 @@ export const useGroupsStore = defineStore('groups', {
         const group = response.data
         this.upsertGroup(group)
         return group
-      } catch (error) {
+      } catch (error: any) {
         console.error(error)
-        this.error = error.message || 'Unable to update the group.'
+        this.error = error?.message || 'Unable to update the group.'
         throw error
       }
     },
-    async deleteGroup(groupId) {
+    async deleteGroup(groupId: string) {
       this.error = ''
 
       try {
@@ -200,9 +248,9 @@ export const useGroupsStore = defineStore('groups', {
         if (this.activeGroupId === groupId) {
           this.activeGroupId = ''
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error(error)
-        this.error = error.message || 'Unable to delete the group.'
+        this.error = error?.message || 'Unable to delete the group.'
         throw error
       }
     },
@@ -225,7 +273,7 @@ export const useGroupsStore = defineStore('groups', {
           this.groupFeed = snapshot.docs
             .map((docSnapshot) => ({
               id: docSnapshot.id,
-              ...docSnapshot.data(),
+              ...(docSnapshot.data() as Omit<GroupPost, 'id'>),
             }))
             .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
         },
@@ -235,7 +283,7 @@ export const useGroupsStore = defineStore('groups', {
         },
       )
     },
-    async createPost(postDetails) {
+    async createPost(postDetails: GroupPostDetails) {
       this.error = ''
 
       try {
@@ -245,13 +293,13 @@ export const useGroupsStore = defineStore('groups', {
         })
 
         return response.data
-      } catch (error) {
+      } catch (error: any) {
         console.error(error)
-        this.error = error.message || 'Unable to post to the group feed.'
+        this.error = error?.message || 'Unable to post to the group feed.'
         throw error
       }
     },
-    async updatePost(postId, postDetails) {
+    async updatePost(postId: string, postDetails: GroupPostDetails) {
       this.error = ''
 
       try {
@@ -266,23 +314,25 @@ export const useGroupsStore = defineStore('groups', {
         ))
 
         return updatedPost
-      } catch (error) {
+      } catch (error: any) {
         console.error(error)
-        this.error = error.message || 'Unable to update the post.'
+        this.error = error?.message || 'Unable to update the post.'
         throw error
       }
     },
-    async deletePost(postId) {
+    async deletePost(postId: string) {
       this.error = ''
 
       try {
         await deleteGroupPostFunction({ postId })
         this.groupFeed = this.groupFeed.filter((post) => post.id !== postId)
-      } catch (error) {
+      } catch (error: any) {
         console.error(error)
-        this.error = error.message || 'Unable to delete the post.'
+        this.error = error?.message || 'Unable to delete the post.'
         throw error
       }
     },
   },
 })
+
+export type { Group, GroupDetails, GroupPost, GroupPostDetails, MemberSummary }

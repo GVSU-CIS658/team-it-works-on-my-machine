@@ -197,8 +197,14 @@ The implemented callable functions are:
 | `createGroup` | Creates a study group and generates a join code |
 | `joinGroup` | Adds the signed-in user to a group by join code |
 | `leaveGroup` | Removes the signed-in user from a group they belong to |
+| `updateGroup` | Updates the name and description of a group owned by the signed-in user |
 | `deleteGroup` | Deletes a group owned by the signed-in user |
 | `createGroupPost` | Creates a shared group feed post for a group member |
+| `updateGroupPost` | Updates a shared group feed post for the creator or group owner |
+| `deleteGroupPost` | Deletes a shared group feed post for the creator or group owner |
+| `createSession` | Creates a study session for a group member |
+| `updateSession` | Updates a study session for the creator or group owner |
+| `deleteSession` | Deletes a study session for the creator or group owner |
 
 ## 2.5 Database Responsibilities
 
@@ -258,6 +264,7 @@ Pinia is used to manage:
 - Tasks state
 
 The authentication store manages Firebase Auth state, profile loading, signup, login, logout, password reset, Google sign-in, profile update, and account deletion. The task store manages private task reads plus backend-mediated task writes. The groups store manages group membership reads, active group selection, and shared feed reads plus backend-mediated group and feed writes.
+The sessions store manages group-scoped session reads plus backend-mediated session create, update, and delete operations.
 
 # 4. Backend Architecture
 
@@ -297,8 +304,19 @@ The backend uses Firebase callable functions instead of a traditional REST API. 
 | `createGroup` | Creates a group, assigns ownership, and generates a join code |
 | `joinGroup` | Adds the signed-in user to a group by join code |
 | `leaveGroup` | Removes a non-owner member from a group |
+| `updateGroup` | Updates a group name and description for the group owner |
 | `deleteGroup` | Deletes a group and removes membership references from user profiles |
 | `createGroupPost` | Creates a feed post for a signed-in group member |
+| `updateGroupPost` | Updates a feed post for the post creator or group owner |
+| `deleteGroupPost` | Deletes a feed post for the post creator or group owner |
+
+### Session Functions
+
+| Callable Function | Description |
+| --- | --- |
+| `createSession` | Creates a group session for a signed-in group member |
+| `updateSession` | Updates a group session for the session creator or group owner |
+| `deleteSession` | Deletes a group session for the session creator or group owner |
 
 ### Why Callable Functions Were Used
 
@@ -317,8 +335,9 @@ Profile write operations are mediated by backend functions:
 Task and shared-group writes are also mediated by backend functions:
 
 - Task creation, update, and deletion are handled by `createTask`, `updateTask`, and `deleteTask`
-- Group creation, join, leave, and delete are handled by `createGroup`, `joinGroup`, `leaveGroup`, and `deleteGroup`
-- Group feed post creation is handled by `createGroupPost`
+- Group creation, join, leave, update, and delete are handled by `createGroup`, `joinGroup`, `leaveGroup`, `updateGroup`, and `deleteGroup`
+- Group feed post creation, update, and deletion are handled by `createGroupPost`, `updateGroupPost`, and `deleteGroupPost`
+- Session creation, update, and deletion are handled by `createSession`, `updateSession`, and `deleteSession`
 
 The backend uses the authenticated user's UID from Firebase Auth context rather than trusting a user ID sent from the frontend.
 
@@ -381,6 +400,7 @@ Current shared group shape:
   joinCode,
   ownerId,
   memberIds: [],
+  memberSummaries: [],
   createdAt,
   updatedAt
 }
@@ -403,7 +423,7 @@ Current shared group feed shape:
 
 ### Sessions
 
-Planned session shape:
+Current session shape:
 
 ```js
 {
@@ -412,7 +432,8 @@ Planned session shape:
   startsAt,
   locationOrLink,
   createdBy,
-  createdAt
+  createdAt,
+  updatedAt
 }
 ```
 
@@ -499,7 +520,16 @@ match /groupFeed/{postId} {
 }
 ```
 
-The `users`, `Tasks`, `groups`, and `groupFeed` rules block direct client writes. Firebase Cloud Functions use the Firebase Admin SDK and are responsible for trusted profile, task, and shared-group writes.
+Current `sessions` rule:
+
+```js
+match /sessions/{sessionId} {
+  allow read: if isGroupMember(resource.data.groupId);
+  allow write: if false;
+}
+```
+
+The `users`, `Tasks`, `groups`, `groupFeed`, and `sessions` rules block direct client writes. Firebase Cloud Functions use the Firebase Admin SDK and are responsible for trusted profile, task, group, feed, and session writes.
 
 ## 5.5 CRUD Implementation
 
@@ -508,9 +538,9 @@ The `users`, `Tasks`, `groups`, and `groupFeed` rules block direct client writes
 | User Profile | Cloud Function | Firestore owner read | Cloud Function | Cloud Function |
 | Auth Account | Firebase Auth | Firebase Auth | Limited by Firebase Auth | Firebase Auth |
 | Tasks | Cloud Function | Firestore owner read | Cloud Function | Cloud Function |
-| Groups | Cloud Function | Firestore member read | Not implemented | Cloud Function |
-| Sessions | Prototype | Prototype | Prototype | Prototype |
-| Feed | Cloud Function | Firestore member read | Not implemented | Deleted when parent group is deleted |
+| Groups | Cloud Function | Firestore member read | Cloud Function | Cloud Function |
+| Sessions | Cloud Function | Firestore member read | Cloud Function | Cloud Function |
+| Feed | Cloud Function | Firestore member read | Cloud Function | Cloud Function |
 
 # 6. Authentication & Authorization
 
@@ -560,10 +590,10 @@ Security features include:
 - Firebase Authentication
 - Protected frontend routes
 - Cloud Functions for sensitive profile writes
-- Cloud Functions for task and group/feed writes
+- Cloud Functions for task, group/feed, and session writes
 - Firebase Admin SDK for trusted backend database writes
 - Firestore rules that block direct client writes to user profiles
-- Firestore rules that restrict Tasks to the owner and groups/feed to group members
+- Firestore rules that restrict Tasks to the owner and groups/feed/sessions to group members
 - Read-only role field in the Profile UI
 - Password reset handled through Firebase Auth
 - Google sign-in through Firebase Auth
@@ -585,9 +615,10 @@ Performance considerations include:
 - Firestore queries scoped to user data where applicable
 - Firestore group queries scoped to `memberIds` for the signed-in user
 - Firestore group feed queries scoped to the active group
+- Firestore session queries scoped to the active group
 - Pinia state management to avoid unnecessary repeated state handling
 - Vue Router route guards with auth hydration
-- Callable functions used for sensitive profile writes and protected task/group write operations
+- Callable functions used for sensitive profile writes and protected task/group/session write operations
 
 ## 7.4 Reliability
 
@@ -595,10 +626,10 @@ Reliability features include:
 
 - Centralized auth state management
 - Backend validation for profile writes
-- Backend validation for task and group/feed write operations
+- Backend validation for task, group/feed, and session write operations
 - Firestore rules deployed from a version-controlled rules file
 - Shared status page component for `403` and `404` routes
-- Error messages for login, signup, forgot password, profile, task, and group operations
+- Error messages for login, signup, forgot password, profile, task, group, and session operations
 
 # 8. Deployment
 
@@ -671,6 +702,10 @@ Task and Groups backend integration followed:
 12. Groups and group feed reads were added through Firestore member-scoped queries.
 13. Firestore rules were tightened to allow member-only reads for groups and group feed.
 14. Dashboard group display was connected to the real groups store.
+15. Session create, update, and delete were added through Cloud Functions.
+16. Session reads were added through Firestore group-scoped queries with member-only rules.
+17. The Sessions page was connected to real groups and real sessions.
+18. Dashboard upcoming sessions were connected to real session data.
 
 # 10. Challenges & Engineering Decisions
 
@@ -709,10 +744,21 @@ Group ownership and membership are represented by:
 
 This allows Firestore rules and Cloud Functions to enforce shared-data access based on the signed-in Firebase UID.
 
+## 10.6 Sessions Permissions
+
+Sessions are scoped to real groups rather than a standalone session list.
+
+This means:
+
+- group members can read sessions for their groups
+- session creators can edit and delete their own sessions
+- group owners can also edit and delete sessions within their groups
+
+This reuses the same ownership and membership model already established for Groups, which reduced duplication in both Firestore rules and Cloud Functions.
+
 # 11. Future Improvements
 
-- Finish Sessions with real Firestore persistence and Cloud Functions
-- Add group and feed edit/delete actions where appropriate
+- Add inline session edit affordances or alternate layouts as needed
 - Expanded role-based authorization
 - Admin interface for role management
 - Notifications for upcoming sessions
@@ -730,9 +776,9 @@ The Study Group Planner demonstrates:
 - Firebase Authentication for multi-user identity
 - Firebase Cloud Functions as a backend service layer
 - Backend-mediated user profile creation, update, and deletion
-- Backend-mediated task and shared-group write operations
+- Backend-mediated task, group/feed, and session write operations
 - Firestore security rules for private user profile data
-- Firestore security rules for private tasks and member-only group data
+- Firestore security rules for private tasks and member-only group/session data
 - Pinia-based frontend state management
 - Vue Router protected routes
 - Cloud Firestore integration

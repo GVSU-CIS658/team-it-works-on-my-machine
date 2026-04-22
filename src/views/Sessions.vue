@@ -1,64 +1,21 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed, ref, watch } from 'vue'
+
 import { useAuthStore } from '../stores/auth'
+import { useGroupsStore } from '../stores/groups'
+import { useSessionsStore, type Session } from '../stores/sessions'
 
 const auth = useAuthStore()
+const groupsStore = useGroupsStore()
+const sessionsStore = useSessionsStore()
 
 const currentUserId = computed(() => auth.user?.uid || '')
-
-// ── Types ──────────────────────────────────────────────────────────────────
-type Group = {
-  id: string
-  title: string
-}
-
-type Session = {
-  id: string
-  groupId: string
-  title: string
-  startsAt: Date
-  locationOrLink: string
-  createdBy: string
-}
-
-// ── Mock data (replace with Firestore/API calls) ───────────────────────────
-const groups = ref<Group[]>([
-  { id: 'g1', title: 'Math Study Group' },
-  { id: 'g2', title: 'Science Team' },
-  { id: 'g3', title: 'CIS 658 Project' },
-])
-
-const allSessions = ref<Session[]>([
-  {
-    id: 's1',
-    groupId: 'g1',
-    title: 'Midterm Review',
-    startsAt: new Date('2025-04-10T14:00:00'),
-    locationOrLink: 'Library Room 204',
-    createdBy: 'mock-user-id',
-  },
-  {
-    id: 's2',
-    groupId: 'g1',
-    title: 'Final Prep',
-    startsAt: new Date('2025-04-20T10:00:00'),
-    locationOrLink: 'https://meet.google.com/abc-defg-hij',
-    createdBy: 'other-user-id',
-  },
-  {
-    id: 's3',
-    groupId: 'g3',
-    title: 'Sprint Planning',
-    startsAt: new Date('2025-04-08T09:00:00'),
-    locationOrLink: 'https://zoom.us/j/123456789',
-    createdBy: 'mock-user-id',
-  },
-])
-
-// ── State ──────────────────────────────────────────────────────────────────
-const selectedGroupId = ref<string>('')
+const selectedGroupId = ref('')
 const showDialog = ref(false)
 const errorMessage = ref('')
+const isCreatingSession = ref(false)
+const pendingDeleteId = ref('')
+const editingSessionId = ref('')
 
 const newSession = ref({
   title: '',
@@ -67,20 +24,60 @@ const newSession = ref({
   locationOrLink: '',
 })
 
-// ── Computed ───────────────────────────────────────────────────────────────
-const groupSessions = computed(() => {
-  if (!selectedGroupId.value) return []
-  return allSessions.value
-    .filter(s => s.groupId === selectedGroupId.value)
-    .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())
-})
+const groups = computed(() => groupsStore.userGroups.map((group) => ({
+  id: group.id,
+  title: group.name,
+})))
 
-const selectedGroupTitle = computed(() => {
-  const g = groups.value.find(g => g.id === selectedGroupId.value)
-  return g ? g.title : ''
-})
+const groupSessions = computed(() => sessionsStore.sessions)
+const selectedGroup = computed(() => (
+  groupsStore.userGroups.find((group) => group.id === selectedGroupId.value) ?? null
+))
+const selectedGroupTitle = computed(() => selectedGroup.value?.name ?? '')
+const sessionsError = computed(() => sessionsStore.error)
 
-// ── Helpers ────────────────────────────────────────────────────────────────
+watch(
+  () => auth.user?.uid ?? '',
+  (ownerId) => {
+    groupsStore.init(ownerId)
+    sessionsStore.init(ownerId)
+
+    if (ownerId && selectedGroupId.value) {
+      sessionsStore.setActiveGroup(selectedGroupId.value)
+    }
+  },
+  { immediate: true },
+)
+
+watch(
+  () => groupsStore.userGroups,
+  (availableGroups) => {
+    if (!availableGroups.length) {
+      selectedGroupId.value = ''
+      sessionsStore.setActiveGroup('')
+      return
+    }
+
+    if (!availableGroups.some((group) => group.id === selectedGroupId.value)) {
+      selectedGroupId.value = availableGroups[0].id
+      return
+    }
+
+    if (selectedGroupId.value) {
+      sessionsStore.setActiveGroup(selectedGroupId.value)
+    }
+  },
+  { immediate: true, deep: true },
+)
+
+watch(
+  selectedGroupId,
+  (groupId) => {
+    sessionsStore.setActiveGroup(groupId)
+  },
+  { immediate: true },
+)
+
 function formatDate(date: Date): string {
   return date.toLocaleDateString('en-US', {
     weekday: 'short',
@@ -97,50 +94,119 @@ function formatTime(date: Date): string {
   })
 }
 
-// ── Actions ────────────────────────────────────────────────────────────────
+function canManageSession(session: Session) {
+  return Boolean(
+    currentUserId.value
+    && (session.createdBy === currentUserId.value || selectedGroup.value?.ownerId === currentUserId.value),
+  )
+}
+
+function toDateInputValue(date: Date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
+}
+
+function toTimeInputValue(date: Date) {
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+
+  return `${hours}:${minutes}`
+}
+
 function openDialog() {
+  editingSessionId.value = ''
   newSession.value = { title: '', date: '', time: '', locationOrLink: '' }
   errorMessage.value = ''
+  sessionsStore.clearError()
   showDialog.value = true
 }
 
-function createSession() {
-  if (!newSession.value.title || !newSession.value.date || !newSession.value.time) {
+function openEditDialog(session: Session) {
+  editingSessionId.value = session.id
+  newSession.value = {
+    title: session.title,
+    date: toDateInputValue(session.startsAt),
+    time: toTimeInputValue(session.startsAt),
+    locationOrLink: session.locationOrLink,
+  }
+  errorMessage.value = ''
+  sessionsStore.clearError()
+  showDialog.value = true
+}
+
+function closeDialog() {
+  showDialog.value = false
+  editingSessionId.value = ''
+  errorMessage.value = ''
+}
+
+async function saveSession() {
+  if (!newSession.value.title || !newSession.value.date || !newSession.value.time || !selectedGroupId.value) {
     errorMessage.value = 'Please fill in title, date, and time.'
     return
   }
 
-  const startsAt = new Date(`${newSession.value.date}T${newSession.value.time}:00`)
+  errorMessage.value = ''
+  sessionsStore.clearError()
+  isCreatingSession.value = true
 
-  const session: Session = {
-    id: 's' + Date.now(),
-    groupId: selectedGroupId.value,
-    title: newSession.value.title,
-    startsAt,
-    locationOrLink: newSession.value.locationOrLink,
-    createdBy: currentUserId.value || 'mock-user-id',
+  try {
+    const startsAt = new Date(`${newSession.value.date}T${newSession.value.time}:00`).toISOString()
+
+    if (editingSessionId.value) {
+      await sessionsStore.updateSession(editingSessionId.value, {
+        title: newSession.value.title.trim(),
+        startsAt,
+        locationOrLink: newSession.value.locationOrLink.trim(),
+      })
+    } else {
+      await sessionsStore.createSession({
+        groupId: selectedGroupId.value,
+        title: newSession.value.title.trim(),
+        startsAt,
+        locationOrLink: newSession.value.locationOrLink.trim(),
+      })
+    }
+
+    closeDialog()
+  } catch {
+    errorMessage.value = sessionsStore.error || `Unable to ${editingSessionId.value ? 'update' : 'create'} the session.`
+  } finally {
+    isCreatingSession.value = false
   }
-
-  allSessions.value.push(session)
-  showDialog.value = false
 }
 
-function deleteSession(id: string) {
-  allSessions.value = allSessions.value.filter(s => s.id !== id)
+async function deleteSession(sessionId: string) {
+  if (!sessionId || pendingDeleteId.value === sessionId) {
+    return
+  }
+
+  sessionsStore.clearError()
+  pendingDeleteId.value = sessionId
+
+  try {
+    await sessionsStore.deleteSession(sessionId)
+  } finally {
+    pendingDeleteId.value = ''
+  }
 }
 </script>
 
 <template>
   <div class="sessions-view">
+    <div v-if="sessionsError" class="groups-error-message">
+      {{ sessionsError }}
+    </div>
 
-    <!-- Header -->
     <div class="sessions-header page-hero">
       <h1>Sessions</h1>
       <h2>Plan and manage shared study sessions.</h2>
       <p>Select a group to view upcoming sessions, create new ones, or remove ones you created.</p>
     </div>
 
-    <!-- Group Selector -->
     <div class="sessions-controls">
       <v-select
         v-model="selectedGroupId"
@@ -155,7 +221,8 @@ function deleteSession(id: string) {
 
       <v-btn
         v-if="selectedGroupId"
-        class="button-pill"
+        class="sessions-new-session-button"
+        color="primary"
         variant="flat"
         @click="openDialog"
       >
@@ -163,11 +230,14 @@ function deleteSession(id: string) {
       </v-btn>
     </div>
 
-    <!-- Session List -->
     <div v-if="selectedGroupId" class="sessions-list-section">
-      <h2>{{ selectedGroupTitle }} — Upcoming Sessions</h2>
+      <h2>{{ selectedGroupTitle }} - Upcoming Sessions</h2>
 
-      <p v-if="groupSessions.length === 0" class="sessions-empty">
+      <p v-if="sessionsStore.isLoading" class="sessions-empty">
+        Loading sessions...
+      </p>
+
+      <p v-else-if="groupSessions.length === 0" class="sessions-empty">
         No sessions yet. Create one above.
       </p>
 
@@ -192,29 +262,37 @@ function deleteSession(id: string) {
 
           <div class="session-card__actions">
             <v-btn
-              v-if="session.createdBy === (currentUserId || 'mock-user-id')"
-              class="button-pill"
-              variant="flat"
+              v-if="canManageSession(session)"
+              icon="mdi-pencil"
+              variant="text"
+              color="grey"
+              aria-label="Edit session"
+              :disabled="pendingDeleteId === session.id"
+              @click="openEditDialog(session)"
+            />
+            <v-btn
+              v-if="canManageSession(session)"
+              icon="mdi-trash-can"
+              variant="text"
+              color="error"
+              aria-label="Delete session"
+              :loading="pendingDeleteId === session.id"
+              :disabled="pendingDeleteId === session.id"
               @click="deleteSession(session.id)"
-            >
-              DELETE
-            </v-btn>
+            />
           </div>
         </li>
       </ul>
     </div>
 
-    <!-- Placeholder when no group selected -->
     <div v-else class="sessions-placeholder">
       <p>Select a group above to see its sessions.</p>
     </div>
 
-    <!-- Create Session Dialog -->
-    <v-dialog v-model="showDialog" max-width="520">
+    <v-dialog v-model="showDialog" max-width="450">
       <v-card class="sessions-dialog">
-        <v-card-title>New Session</v-card-title>
+        <v-card-title>{{ editingSessionId ? 'Edit Session' : 'New Session' }}</v-card-title>
         <v-card-text>
-
           <v-alert
             v-if="errorMessage"
             type="error"
@@ -235,7 +313,7 @@ function deleteSession(id: string) {
 
           <v-text-field
             v-model="newSession.date"
-            label="Date"
+            placeholder="Date"
             type="date"
             variant="outlined"
             density="comfortable"
@@ -245,7 +323,7 @@ function deleteSession(id: string) {
 
           <v-text-field
             v-model="newSession.time"
-            label="Time"
+            placeholder="Time"
             type="time"
             variant="outlined"
             density="comfortable"
@@ -261,16 +339,31 @@ function deleteSession(id: string) {
             hide-details
             class="sessions-dialog__field"
           />
-
         </v-card-text>
 
         <v-card-actions class="sessions-dialog__actions">
-          <v-btn class="button-pill" variant="flat" @click="createSession">CREATE</v-btn>
-          <v-btn class="button-pill" variant="flat" @click="showDialog = false">CANCEL</v-btn>
+          <v-btn
+            class="sessions-dialog-button"
+            color="primary"
+            variant="flat"
+            :loading="isCreatingSession"
+            :disabled="isCreatingSession"
+            @click="saveSession"
+          >
+            {{ editingSessionId ? 'SAVE' : 'CREATE' }}
+          </v-btn>
+          <v-btn
+            class="sessions-dialog-button"
+            color="primary"
+            variant="flat"
+            :disabled="isCreatingSession"
+            @click="closeDialog"
+          >
+            CANCEL
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
-
   </div>
 </template>
 
