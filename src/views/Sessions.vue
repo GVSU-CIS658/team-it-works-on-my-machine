@@ -1,83 +1,44 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onUnmounted, watch } from 'vue'
 import { useAuthStore } from '../stores/auth'
+import { useGroupsStore } from '../stores/groups'
+import { useSessionsStore } from '../stores/sessions'
 
+// ── Stores ─────────────────────────────────────────────────────────────────
 const auth = useAuthStore()
+auth.hydrate()
 
-const currentUserId = computed(() => auth.user?.uid || '')
+const groupsStore = useGroupsStore()
+const sessionsStore = useSessionsStore()
 
-// ── Types ──────────────────────────────────────────────────────────────────
-type Group = {
-  id: string
-  title: string
-}
+// ── Current user ───────────────────────────────────────────────────────────
+const currentUserId = computed(() => auth.user?.uid ?? '')
 
-type Session = {
-  id: string
-  groupId: string
-  title: string
-  startsAt: Date
-  locationOrLink: string
-  createdBy: string
-}
-
-// ── Mock data (replace with Firestore/API calls) ───────────────────────────
-const groups = ref<Group[]>([
-  { id: 'g1', title: 'Math Study Group' },
-  { id: 'g2', title: 'Science Team' },
-  { id: 'g3', title: 'CIS 658 Project' },
-])
-
-const allSessions = ref<Session[]>([
-  {
-    id: 's1',
-    groupId: 'g1',
-    title: 'Midterm Review',
-    startsAt: new Date('2025-04-10T14:00:00'),
-    locationOrLink: 'Library Room 204',
-    createdBy: 'mock-user-id',
-  },
-  {
-    id: 's2',
-    groupId: 'g1',
-    title: 'Final Prep',
-    startsAt: new Date('2025-04-20T10:00:00'),
-    locationOrLink: 'https://meet.google.com/abc-defg-hij',
-    createdBy: 'other-user-id',
-  },
-  {
-    id: 's3',
-    groupId: 'g3',
-    title: 'Sprint Planning',
-    startsAt: new Date('2025-04-08T09:00:00'),
-    locationOrLink: 'https://zoom.us/j/123456789',
-    createdBy: 'mock-user-id',
-  },
-])
-
-// ── State ──────────────────────────────────────────────────────────────────
+// ── Group selector ─────────────────────────────────────────────────────────
 const selectedGroupId = ref<string>('')
+
+// When group changes, re-init the sessions store listener
+watch(selectedGroupId, (groupId) => {
+  if (groupId) sessionsStore.init(groupId)
+})
+
+// ── Sessions from store ────────────────────────────────────────────────────
+const groupSessions = computed(() => sessionsStore.upcomingSessions)
+
+const selectedGroupTitle = computed(() => {
+  const g = groupsStore.userGroups.find((g) => g.id === selectedGroupId.value)
+  return g ? g.name : ''
+})
+
+// ── Dialog state ───────────────────────────────────────────────────────────
 const showDialog = ref(false)
-const errorMessage = ref('')
+const formError = ref('')
 
 const newSession = ref({
   title: '',
   date: '',
   time: '',
   locationOrLink: '',
-})
-
-// ── Computed ───────────────────────────────────────────────────────────────
-const groupSessions = computed(() => {
-  if (!selectedGroupId.value) return []
-  return allSessions.value
-    .filter(s => s.groupId === selectedGroupId.value)
-    .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())
-})
-
-const selectedGroupTitle = computed(() => {
-  const g = groups.value.find(g => g.id === selectedGroupId.value)
-  return g ? g.title : ''
 })
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -97,55 +58,76 @@ function formatTime(date: Date): string {
   })
 }
 
+// Build ISO string from local date + time inputs (avoids UTC date-shift bug)
+function toLocalISOString(date: string, time: string): string {
+  return `${date}T${time}:00`
+}
+
 // ── Actions ────────────────────────────────────────────────────────────────
 function openDialog() {
   newSession.value = { title: '', date: '', time: '', locationOrLink: '' }
-  errorMessage.value = ''
+  formError.value = ''
   showDialog.value = true
 }
 
-function createSession() {
+async function createSession() {
   if (!newSession.value.title || !newSession.value.date || !newSession.value.time) {
-    errorMessage.value = 'Please fill in title, date, and time.'
+    formError.value = 'Please fill in title, date, and time.'
     return
   }
 
-  const startsAt = new Date(`${newSession.value.date}T${newSession.value.time}:00`)
+  formError.value = ''
 
-  const session: Session = {
-    id: 's' + Date.now(),
-    groupId: selectedGroupId.value,
-    title: newSession.value.title,
-    startsAt,
-    locationOrLink: newSession.value.locationOrLink,
-    createdBy: currentUserId.value || 'mock-user-id',
+  try {
+    await sessionsStore.addSession({
+      title: newSession.value.title,
+      startsAt: toLocalISOString(newSession.value.date, newSession.value.time),
+      locationOrLink: newSession.value.locationOrLink,
+    })
+    showDialog.value = false
+  } catch {
+    formError.value = sessionsStore.error || 'Failed to create session.'
   }
-
-  allSessions.value.push(session)
-  showDialog.value = false
 }
 
-function deleteSession(id: string) {
-  allSessions.value = allSessions.value.filter(s => s.id !== id)
+async function deleteSession(sessionId: string) {
+  try {
+    await sessionsStore.deleteSession(sessionId)
+  } catch {
+    // error already set in store
+  }
 }
+
+// ── Cleanup ────────────────────────────────────────────────────────────────
+onUnmounted(() => sessionsStore.cleanup())
 </script>
 
 <template>
   <div class="sessions-view">
 
     <!-- Header -->
-    <div class="sessions-header page-hero">
-      <h1>Sessions</h1>
-      <h2>Plan and manage shared study sessions.</h2>
+    <div class="sessions-header">
+      <p>Sessions</p>
+      <h1>Plan and manage shared study sessions.</h1>
       <p>Select a group to view upcoming sessions, create new ones, or remove ones you created.</p>
     </div>
+
+    <!-- Store-level error banner -->
+    <v-alert
+      v-if="sessionsStore.error"
+      type="error"
+      density="compact"
+      class="sessions-store-error"
+    >
+      {{ sessionsStore.error }}
+    </v-alert>
 
     <!-- Group Selector -->
     <div class="sessions-controls">
       <v-select
         v-model="selectedGroupId"
-        :items="groups"
-        item-title="title"
+        :items="groupsStore.userGroups"
+        item-title="name"
         item-value="id"
         label="Select a group"
         variant="outlined"
@@ -157,14 +139,20 @@ function deleteSession(id: string) {
         v-if="selectedGroupId"
         class="button-pill"
         variant="flat"
+        :disabled="sessionsStore.isLoading"
         @click="openDialog"
       >
         + NEW SESSION
       </v-btn>
     </div>
 
+    <!-- Loading spinner -->
+    <div v-if="sessionsStore.isLoading" class="sessions-loading">
+      <v-progress-circular indeterminate />
+    </div>
+
     <!-- Session List -->
-    <div v-if="selectedGroupId" class="sessions-list-section">
+    <div v-else-if="selectedGroupId" class="sessions-list-section">
       <h2>{{ selectedGroupTitle }} — Upcoming Sessions</h2>
 
       <p v-if="groupSessions.length === 0" class="sessions-empty">
@@ -192,9 +180,10 @@ function deleteSession(id: string) {
 
           <div class="session-card__actions">
             <v-btn
-              v-if="session.createdBy === (currentUserId || 'mock-user-id')"
+              v-if="session.createdBy === currentUserId"
               class="button-pill"
               variant="flat"
+              :disabled="sessionsStore.isLoading"
               @click="deleteSession(session.id)"
             >
               DELETE
@@ -216,12 +205,12 @@ function deleteSession(id: string) {
         <v-card-text>
 
           <v-alert
-            v-if="errorMessage"
+            v-if="formError"
             type="error"
             density="compact"
             class="sessions-dialog__error"
           >
-            {{ errorMessage }}
+            {{ formError }}
           </v-alert>
 
           <v-text-field
@@ -265,8 +254,21 @@ function deleteSession(id: string) {
         </v-card-text>
 
         <v-card-actions class="sessions-dialog__actions">
-          <v-btn class="button-pill" variant="flat" @click="createSession">CREATE</v-btn>
-          <v-btn class="button-pill" variant="flat" @click="showDialog = false">CANCEL</v-btn>
+          <v-btn
+            class="button-pill"
+            variant="flat"
+            :disabled="sessionsStore.isLoading"
+            @click="createSession"
+          >
+            CREATE
+          </v-btn>
+          <v-btn
+            class="button-pill"
+            variant="flat"
+            @click="showDialog = false"
+          >
+            CANCEL
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
