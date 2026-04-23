@@ -1,16 +1,19 @@
 import { defineStore } from 'pinia'
-import {
-  collection,
-  onSnapshot,
-  query,
-  where,
-  type QueryDocumentSnapshot,
-} from 'firebase/firestore'
+import { collection, onSnapshot, query, where, type QueryDocumentSnapshot } from 'firebase/firestore'
 import { httpsCallable } from 'firebase/functions'
 
 import { db, functions } from '../services/firebase'
 
-// ── Types ──────────────────────────────────────────────────────────────────
+type SessionPayload = {
+  groupId: string
+  title: string
+  startsAt: string
+  locationOrLink?: string
+  createdBy: string
+  createdAt?: string
+  updatedAt?: string
+}
+
 type Session = {
   id: string
   groupId: string
@@ -22,39 +25,24 @@ type Session = {
   updatedAt?: string
 }
 
-type SessionPayload = {
-  groupId: string
+type SessionUpdates = {
   title: string
   startsAt: string
-  locationOrLink: string
-  createdBy: string
-  createdAt?: string
-  updatedAt?: string
-}
-
-type SessionUpdates = {
-  title?: string
-  startsAt?: string
   locationOrLink?: string
 }
 
-// ── Firebase callables (mirror tasks.ts pattern) ───────────────────────────
 const createSessionFunction = httpsCallable(functions, 'createSession')
 const updateSessionFunction = httpsCallable(functions, 'updateSession')
 const deleteSessionFunction = httpsCallable(functions, 'deleteSession')
 
-// ── Converter ─────────────────────────────────────────────────────────────
 function toSession(document: QueryDocumentSnapshot): Session {
   const data = document.data() as SessionPayload
-
-  // Use local time — avoids the UTC date-shift bug found in tasks
-  const startsAt = data.startsAt ? new Date(data.startsAt) : new Date()
 
   return {
     id: document.id,
     groupId: data.groupId,
     title: data.title,
-    startsAt,
+    startsAt: new Date(data.startsAt),
     locationOrLink: data.locationOrLink ?? '',
     createdBy: data.createdBy,
     createdAt: data.createdAt,
@@ -62,55 +50,94 @@ function toSession(document: QueryDocumentSnapshot): Session {
   }
 }
 
-// ── Store ──────────────────────────────────────────────────────────────────
 export const useSessionsStore = defineStore('sessions', {
   state: () => ({
-    groupId: '',
+    ownerId: '',
+    activeGroupId: '',
     sessions: [] as Session[],
     isLoading: false,
     error: '',
     unsubscribe: null as null | (() => void),
   }),
 
-  getters: {
-    // Sessions sorted soonest first
-    upcomingSessions: (state): Session[] =>
-      [...state.sessions].sort(
-        (a, b) => a.startsAt.getTime() - b.startsAt.getTime(),
-      ),
-  },
-
   actions: {
-    // Subscribe to real-time Firestore updates for a group
-    init(groupId: string) {
-      if (!groupId) return
+    clearError() {
+      this.error = ''
+    },
 
-      // Already listening to this group — do nothing
-      if (this.groupId === groupId && this.unsubscribe) return
-
-      // Unsubscribe from previous group
-      if (this.unsubscribe) {
-        this.unsubscribe()
-        this.unsubscribe = null
+    init(ownerId: string) {
+      if (!ownerId) {
+        this.reset()
+        return
       }
 
-      this.groupId = groupId
-      this.isLoading = true
+      if (this.ownerId === ownerId) {
+        if (this.activeGroupId && !this.unsubscribe) {
+          this.syncSessions()
+        }
+
+        return
+      }
+
+      this.resetListener()
+      this.ownerId = ownerId
       this.error = ''
 
-      const sessionQuery = query(
+      if (this.activeGroupId) {
+        this.syncSessions()
+      }
+    },
+
+    resetListener() {
+      if (typeof this.unsubscribe === 'function') {
+        this.unsubscribe()
+      }
+
+      this.unsubscribe = null
+    },
+
+    reset() {
+      this.resetListener()
+      this.ownerId = ''
+      this.activeGroupId = ''
+      this.sessions = []
+      this.isLoading = false
+      this.error = ''
+    },
+
+    setActiveGroup(groupId: string) {
+      this.activeGroupId = groupId
+      this.error = ''
+      this.syncSessions()
+    },
+
+    syncSessions() {
+      this.resetListener()
+
+      if (!this.activeGroupId) {
+        this.sessions = []
+        this.isLoading = false
+        return
+      }
+
+      this.isLoading = true
+
+      const sessionsQuery = query(
         collection(db, 'sessions'),
-        where('groupId', '==', groupId),
+        where('groupId', '==', this.activeGroupId),
       )
 
       this.unsubscribe = onSnapshot(
-        sessionQuery,
+        sessionsQuery,
         (snapshot) => {
-          this.sessions = snapshot.docs.map(toSession)
+          this.sessions = snapshot.docs
+            .map(toSession)
+            .sort((left, right) => left.startsAt.getTime() - right.startsAt.getTime())
           this.isLoading = false
         },
         (error) => {
-          this.error = error.message
+          console.error(error)
+          this.error = 'Unable to load sessions right now.'
           this.sessions = []
           this.isLoading = false
           this.unsubscribe = null
@@ -118,74 +145,45 @@ export const useSessionsStore = defineStore('sessions', {
       )
     },
 
-    // Stop listening when component unmounts
-    cleanup() {
-      if (this.unsubscribe) {
-        this.unsubscribe()
-        this.unsubscribe = null
-      }
-      this.sessions = []
-      this.groupId = ''
-      this.error = ''
-    },
-
-    // Create a new session
-    async addSession(data: {
-      title: string
-      startsAt: string
-      locationOrLink: string
-    }) {
-      if (!data.title.trim() || !data.startsAt) return
-
-      this.isLoading = true
+    async createSession(sessionDetails: SessionUpdates & { groupId: string }) {
       this.error = ''
 
       try {
-        await createSessionFunction({
-          groupId: this.groupId,
-          title: data.title.trim(),
-          startsAt: data.startsAt,
-          locationOrLink: data.locationOrLink.trim(),
+        const response = await createSessionFunction(sessionDetails)
+        return response.data as SessionPayload & { id: string }
+      } catch (error: any) {
+        console.error(error)
+        this.error = error?.message || 'Unable to create the session.'
+        throw error
+      }
+    },
+
+    async updateSession(sessionId: string, sessionDetails: SessionUpdates) {
+      this.error = ''
+
+      try {
+        const response = await updateSessionFunction({
+          sessionId,
+          ...sessionDetails,
         })
+
+        return response.data as SessionPayload & { id: string }
       } catch (error: any) {
-        this.error = error?.message ?? 'Failed to create session. Please try again.'
+        console.error(error)
+        this.error = error?.message || 'Unable to update the session.'
         throw error
-      } finally {
-        this.isLoading = false
       }
     },
 
-    // Edit an existing session
-    async updateSession(sessionId: string, updates: SessionUpdates) {
-      if (!sessionId) return
-
-      this.isLoading = true
-      this.error = ''
-
-      try {
-        await updateSessionFunction({ sessionId, ...updates })
-      } catch (error: any) {
-        this.error = error?.message ?? 'Failed to update session. Please try again.'
-        throw error
-      } finally {
-        this.isLoading = false
-      }
-    },
-
-    // Delete a session
     async deleteSession(sessionId: string) {
-      if (!sessionId) return
-
-      this.isLoading = true
       this.error = ''
 
       try {
         await deleteSessionFunction({ sessionId })
       } catch (error: any) {
-        this.error = error?.message ?? 'Failed to delete session. Please try again.'
+        console.error(error)
+        this.error = error?.message || 'Unable to delete the session.'
         throw error
-      } finally {
-        this.isLoading = false
       }
     },
   },

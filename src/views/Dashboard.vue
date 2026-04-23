@@ -17,6 +17,8 @@
               class="button-pill dashboard-task-icon-button"
               variant="flat"
               aria-label="Add task"
+              :loading="isAddingTask"
+              :disabled="isAddingTask || !message.trim()"
               @click="addingTask">
               <v-icon icon="mdi-plus" />
             </v-btn>
@@ -48,6 +50,9 @@
         </div>
 
         <div class="dashboard-pad">
+          <div v-if="taskError" class="groups-error-message">
+            {{ taskError }}
+          </div>
           <input
             v-model="message"
             class="dashboard-input"
@@ -66,6 +71,7 @@
                   type="checkbox"
                   :name="task.description"
                   :checked="task.isCompleted"
+                  :disabled="pendingTaskId === task.id"
                   @change="toggleTaskComplete(task, $event)"
                 />
                 <s v-if="task.isCompleted">{{ task.description }}</s>
@@ -80,6 +86,7 @@
                   variant="text"
                   class="dashboard-icon-button"
                   aria-label="Edit task"
+                  :disabled="pendingTaskId === task.id"
                   @click.stop="openEditTask(task)">
                   <v-icon icon="mdi-pencil" />
                 </v-btn>
@@ -88,7 +95,8 @@
                   variant="text"
                   class="dashboard-icon-button"
                   aria-label="Delete Task"
-                  @click="taskStore.deleteTask(task.id)">
+                  :disabled="pendingTaskId === task.id"
+                  @click="deleteTask(task.id)">
                   <v-icon icon="mdi-trash-can-outline" />
                 </v-btn>
               </div>
@@ -118,12 +126,15 @@
             <v-btn
               class="button-pill dashboard-row-action dashboard-option"
               variant="flat"
+              :loading="isSavingTask"
+              :disabled="isSavingTask"
               @click="saveTaskEdits">
               SAVE
             </v-btn>
             <v-btn
               class="button-pill dashboard-row-action dashboard-option"
               variant="flat"
+              :disabled="isSavingTask"
               @click="cancelTaskEdit">
               CANCEL
             </v-btn>
@@ -150,7 +161,12 @@
           <h2>Upcoming Sessions</h2>
         </RouterLink>
         <ul>
-          <li>There is no upcoming sessions.</li>
+          <li v-if="sessionsError">{{ sessionsError }}</li>
+          <li v-else-if="!groups.length">Join a group to see upcoming sessions.</li>
+          <li v-else-if="!visibleUpcomingSessions.length">There are no upcoming sessions.</li>
+          <li v-for="session in visibleUpcomingSessions" v-else :key="session.id">
+            {{ session.title }} - {{ formatSessionDate(session.startsAt) }}
+          </li>
         </ul>
       </div>
     </div>
@@ -159,9 +175,19 @@
 
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue'
+import { collection, onSnapshot, query, where } from 'firebase/firestore'
 import { type Task, DashboardTask, TASK_FILTER_OPTIONS, TASK_SORT_OPTIONS } from '../stores/tasks'
 import { useAuthStore } from '../stores/auth'
 import { useGroupsStore } from '../stores/groups'
+import { db } from '../services/firebase'
+
+type DashboardSession = {
+  id: string
+  groupId: string
+  title: string
+  startsAt: Date
+  locationOrLink: string
+}
 
 const editing = ref(false)
 const selectedTaskId = ref('')
@@ -173,6 +199,12 @@ const taskFilterOptions = Object.values(TASK_FILTER_OPTIONS)
 const selectedTaskFilter = ref(taskFilterOptions[0])
 const selectedTaskSort = ref(TASK_SORT_OPTIONS.DATE)
 const selectedTaskSortDirection = ref('ascending')
+const isAddingTask = ref(false)
+const isSavingTask = ref(false)
+const pendingTaskId = ref('')
+const upcomingSessions = ref<DashboardSession[]>([])
+const sessionsError = ref('')
+let unsubscribeSessions: null | (() => void) = null
 
 const auth = useAuthStore()
 const taskStore = DashboardTask()
@@ -181,6 +213,8 @@ const groupsStore = useGroupsStore()
 const username = computed(() => auth.username || auth.user?.firstName)
 const tasks = computed(() => taskStore.tasks)
 const groups = computed(() => groupsStore.userGroups)
+const visibleUpcomingSessions = computed(() => upcomingSessions.value.slice(0, 5))
+const taskError = computed(() => taskStore.error)
 
 const alphabetSortIcon = computed(() => (
   selectedTaskSort.value === TASK_SORT_OPTIONS.ALPHABET && selectedTaskSortDirection.value === 'descending'
@@ -242,13 +276,29 @@ function setTaskSort(sortOption: string) {
 }
 
 async function addingTask() {
+  if (!message.value.trim() || isAddingTask.value) {
+    return
+  }
+
+  taskStore.clearError()
   selectedTaskSort.value = TASK_SORT_OPTIONS.NONE
-  await taskStore.addTask(message.value)
-  message.value = ''
+
+  isAddingTask.value = true
+
+  try {
+    await taskStore.addTask(message.value)
+    message.value = ''
+  } finally {
+    isAddingTask.value = false
+  }
 }
 
 function toDateInputValue(date: Date) {
-  return date.toISOString().slice(0, 10)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
 }
 
 function openEditTask(task: Task) {
@@ -266,19 +316,58 @@ function cancelTaskEdit() {
 }
 
 async function saveTaskEdits() {
-  await taskStore.updateTask(selectedTaskId.value, {
-    description: editTaskMessage.value,
-    dueAt: new Date(`${editTaskDate.value}T00:00:00`).toISOString(),
-  })
-  cancelTaskEdit()
+  if (!selectedTaskId.value || isSavingTask.value) {
+    return
+  }
+
+  taskStore.clearError()
+  isSavingTask.value = true
+  pendingTaskId.value = selectedTaskId.value
+
+  try {
+    await taskStore.updateTask(selectedTaskId.value, {
+      description: editTaskMessage.value,
+      dueAt: new Date(`${editTaskDate.value}T12:00:00`).toISOString(),
+    })
+    cancelTaskEdit()
+  } finally {
+    isSavingTask.value = false
+    pendingTaskId.value = ''
+  }
 }
 
 async function toggleTaskComplete(task: Task, event: Event) {
   const target = event.target as HTMLInputElement
 
-  await taskStore.updateTask(task.id, {
-    isCompleted: target.checked,
-  })
+  if (pendingTaskId.value === task.id) {
+    return
+  }
+
+  taskStore.clearError()
+  pendingTaskId.value = task.id
+
+  try {
+    await taskStore.updateTask(task.id, {
+      isCompleted: target.checked,
+    })
+  } finally {
+    pendingTaskId.value = ''
+  }
+}
+
+async function deleteTask(taskId: string) {
+  if (!taskId || pendingTaskId.value === taskId) {
+    return
+  }
+
+  taskStore.clearError()
+  pendingTaskId.value = taskId
+
+  try {
+    await taskStore.deleteTask(taskId)
+  } finally {
+    pendingTaskId.value = ''
+  }
 }
 
 watch(
@@ -290,6 +379,59 @@ watch(
     }
   },
   { immediate: true },
+)
+
+watch(
+  () => groupsStore.userGroups.map((group) => group.id),
+  (groupIds) => {
+    if (typeof unsubscribeSessions === 'function') {
+      unsubscribeSessions()
+      unsubscribeSessions = null
+    }
+
+    upcomingSessions.value = []
+    sessionsError.value = ''
+
+    if (!groupIds.length) {
+      return
+    }
+
+    const effectiveGroupIds = groupIds.slice(0, 10)
+    const sessionsQuery = query(
+      collection(db, 'sessions'),
+      where('groupId', 'in', effectiveGroupIds),
+    )
+
+    unsubscribeSessions = onSnapshot(
+      sessionsQuery,
+      (snapshot) => {
+        upcomingSessions.value = snapshot.docs
+          .map((docSnapshot) => {
+            const data = docSnapshot.data() as {
+              groupId: string
+              title: string
+              startsAt: string
+              locationOrLink?: string
+            }
+
+            return {
+              id: docSnapshot.id,
+              groupId: data.groupId,
+              title: data.title,
+              startsAt: new Date(data.startsAt),
+              locationOrLink: data.locationOrLink ?? '',
+            }
+          })
+          .filter((session) => !Number.isNaN(session.startsAt.getTime()))
+          .sort((left, right) => left.startsAt.getTime() - right.startsAt.getTime())
+      },
+      () => {
+        sessionsError.value = 'Unable to load upcoming sessions right now.'
+        upcomingSessions.value = []
+      },
+    )
+  },
+  { immediate: true, deep: true },
 )
 
 onUnmounted(() => {
@@ -307,7 +449,21 @@ onUnmounted(() => {
     groupsStore.feedUnsubscribe()
     groupsStore.feedUnsubscribe = null
   }
+
+  if (unsubscribeSessions) {
+    unsubscribeSessions()
+    unsubscribeSessions = null
+  }
 })
+
+function formatSessionDate(date: Date) {
+  return date.toLocaleString([], {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+}
 </script>
 
 <style scoped lang="sass" src="../styles/pages/dashboard.sass"></style>
