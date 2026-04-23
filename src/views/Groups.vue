@@ -2,12 +2,30 @@
   <div class="groups-view">
     <div class="page-hero">
       <h1>Groups & Communities</h1>
+      <p>Create private shared spaces and join with a code from a group owner.</p>
     </div>
 
     <div class="content-card--wide">
       <aside class="groups-sidebar">
         <div v-if="groupsStore.error" class="groups-error-message">
           {{ groupsStore.error }}
+        </div>
+
+        <div v-if="createdGroupShareCode" class="groups-success-message">
+          <div class="groups-success-message__title">Group created</div>
+          <p>Share this join code with other members:</p>
+          <div class="groups-share-code">
+            <span>{{ createdGroupShareCode }}</span>
+            <v-btn
+              type="button"
+              variant="text"
+              size="small"
+              color="primary"
+              @click="copyJoinCode(createdGroupShareCode)"
+            >
+              {{ copyButtonLabel(createdGroupShareCode) }}
+            </v-btn>
+          </div>
         </div>
 
         <div class="groups-actions">
@@ -28,6 +46,7 @@
             >
               Join
             </v-btn>
+            <p class="groups-helper-text">Enter a join code shared by a group owner.</p>
           </div>
 
           <div class="action-group">
@@ -50,7 +69,8 @@
               type="button"
               color="secondary"
               variant="flat"
-              :disabled="!canCreateGroup"
+              :disabled="!canCreateGroup || isCreatingGroup"
+              :loading="isCreatingGroup"
               @click.stop.prevent="handleCreateGroup"
             >
               Create
@@ -130,7 +150,19 @@
               <template v-else>
                 <h2>{{ activeGroup.name }}</h2>
                 <p>{{ activeGroup.description }}</p>
-                <div class="groups-join-code">Join Code: {{ activeGroup.joinCode }}</div>
+                <p class="groups-visibility-note">Visible only to current group members.</p>
+                <div class="groups-join-code">
+                  <span>Join Code: {{ activeGroup.joinCode }}</span>
+                  <v-btn
+                    type="button"
+                    variant="text"
+                    size="small"
+                    color="primary"
+                    @click="copyJoinCode(activeGroup.joinCode)"
+                  >
+                    {{ copyButtonLabel(activeGroup.joinCode) }}
+                  </v-btn>
+                </div>
               </template>
             </div>
 
@@ -318,6 +350,9 @@ const editPostTitle = ref('')
 const editPostBody = ref('')
 const isSavingGroupEdit = ref(false)
 const isSavingPostEdit = ref(false)
+const isCreatingGroup = ref(false)
+const createdGroupShareCode = ref('')
+const copiedJoinCode = ref('')
 
 const activeGroup = computed(() => groupsStore.activeGroup)
 const isActiveGroupOwner = computed(() => groupsStore.isActiveGroupOwner)
@@ -330,6 +365,7 @@ const canSavePostEdit = computed(() => Boolean(editPostTitle.value.trim() && edi
 watch(
   () => auth.user?.uid ?? '',
   (userId) => {
+    groupsStore.clearError()
     groupsStore.init(userId)
   },
   { immediate: true },
@@ -361,16 +397,22 @@ async function handleCreateGroup() {
     return
   }
 
+  isCreatingGroup.value = true
+
   try {
     await groupsStore.createGroup({
       name: newGroupName.value,
       description: newGroupDescription.value,
     })
 
+    createdGroupShareCode.value = groupsStore.activeGroup?.joinCode ?? ''
+
     newGroupName.value = ''
     newGroupDescription.value = ''
   } catch {
     // Store state already exposes the user-facing error.
+  } finally {
+    isCreatingGroup.value = false
   }
 }
 
@@ -526,6 +568,29 @@ function formatPostDate(value) {
   }
 
   return postDate.toLocaleString()
+}
+
+async function copyJoinCode(value) {
+  if (!value) {
+    return
+  }
+
+  try {
+    await navigator.clipboard.writeText(value)
+    copiedJoinCode.value = value
+
+    window.setTimeout(() => {
+      if (copiedJoinCode.value === value) {
+        copiedJoinCode.value = ''
+      }
+    }, 1500)
+  } catch {
+    groupsStore.error = 'Unable to copy the join code right now.'
+  }
+}
+
+function copyButtonLabel(value) {
+  return copiedJoinCode.value === value ? 'Copied' : 'Copy'
 }
 </script>
 

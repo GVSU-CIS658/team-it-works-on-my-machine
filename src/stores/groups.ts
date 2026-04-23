@@ -99,7 +99,7 @@ export const useGroupsStore = defineStore('groups', {
         return
       }
 
-      if (this.ownerId === ownerId && this.unsubscribe) {
+      if (this.ownerId === ownerId && this.unsubscribe && (this.userGroups.length || this.isLoading) && !this.error) {
         return
       }
 
@@ -116,6 +116,7 @@ export const useGroupsStore = defineStore('groups', {
       this.unsubscribe = onSnapshot(
         groupsQuery,
         (snapshot) => {
+          this.error = ''
           this.userGroups = snapshot.docs
             .map((docSnapshot) => ({
               id: docSnapshot.id,
@@ -136,6 +137,7 @@ export const useGroupsStore = defineStore('groups', {
           console.error(error)
           this.error = 'Unable to load groups right now.'
           this.isLoading = false
+          this.unsubscribe = null
         },
       )
     },
@@ -162,6 +164,9 @@ export const useGroupsStore = defineStore('groups', {
       this.groupFeed = []
       this.isLoading = false
       this.error = ''
+    },
+    cleanup() {
+      this.reset()
     },
     setActiveGroup(groupId: string) {
       this.activeGroupId = groupId
@@ -270,6 +275,7 @@ export const useGroupsStore = defineStore('groups', {
       this.feedUnsubscribe = onSnapshot(
         groupFeedQuery,
         (snapshot) => {
+          this.error = ''
           this.groupFeed = snapshot.docs
             .map((docSnapshot) => ({
               id: docSnapshot.id,
@@ -280,6 +286,7 @@ export const useGroupsStore = defineStore('groups', {
         (error) => {
           console.error(error)
           this.error = 'Unable to load the group feed right now.'
+          this.feedUnsubscribe = null
         },
       )
     },

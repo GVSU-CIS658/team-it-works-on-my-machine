@@ -11,7 +11,10 @@
     <div>
       <div class="dashboard-border">
         <div class="dashboard-title">
-          <div><h2>Task</h2></div>
+          <div class="dashboard-section-heading">
+            <h2>My Tasks</h2>
+            <p>Private to your account.</p>
+          </div>
           <div class="dashboard-task-actions">
             <v-btn
               class="button-pill dashboard-task-icon-button"
@@ -60,7 +63,7 @@
           />
         </div>
 
-        <nav>
+        <nav class="dashboard-task-list">
           <ul>
             <li
               v-for="task in visibleTasks"
@@ -144,10 +147,13 @@
 
       <div class="dashboard-border">
         <RouterLink to="/Groups" class="dashboard-header">
-          <h2>Groups</h2>
+          <div class="dashboard-section-heading">
+            <h2>Groups</h2>
+            <p>Shared with the members you join.</p>
+          </div>
         </RouterLink>
 
-        <ul>
+        <ul class="dashboard-panel-list">
           <li v-if="groupsStore.isLoading">Loading groups...</li>
           <li v-else-if="!groups.length">You are not in any groups yet.</li>
           <li v-for="group in groups" v-else :key="group.id">
@@ -158,9 +164,12 @@
 
       <div class="dashboard-border">
         <RouterLink to="/Sessions" class="dashboard-header">
-          <h2>Upcoming Sessions</h2>
+          <div class="dashboard-section-heading">
+            <h2>Upcoming Sessions</h2>
+            <p>Shared with members of your groups.</p>
+          </div>
         </RouterLink>
-        <ul>
+        <ul class="dashboard-panel-list">
           <li v-if="sessionsError">{{ sessionsError }}</li>
           <li v-else-if="!groups.length">Join a group to see upcoming sessions.</li>
           <li v-else-if="!visibleUpcomingSessions.length">There are no upcoming sessions.</li>
@@ -275,6 +284,13 @@ function setTaskSort(sortOption: string) {
   selectedTaskSortDirection.value = 'ascending'
 }
 
+function cleanupDashboardSessionsListener() {
+  if (typeof unsubscribeSessions === 'function') {
+    unsubscribeSessions()
+    unsubscribeSessions = null
+  }
+}
+
 async function addingTask() {
   if (!message.value.trim() || isAddingTask.value) {
     return
@@ -384,10 +400,7 @@ watch(
 watch(
   () => groupsStore.userGroups.map((group) => group.id),
   (groupIds) => {
-    if (typeof unsubscribeSessions === 'function') {
-      unsubscribeSessions()
-      unsubscribeSessions = null
-    }
+    cleanupDashboardSessionsListener()
 
     upcomingSessions.value = []
     sessionsError.value = ''
@@ -435,25 +448,7 @@ watch(
 )
 
 onUnmounted(() => {
-  if (taskStore.unsubscribe) {
-    taskStore.unsubscribe()
-    taskStore.unsubscribe = null
-  }
-
-  if (groupsStore.unsubscribe) {
-    groupsStore.unsubscribe()
-    groupsStore.unsubscribe = null
-  }
-
-  if (groupsStore.feedUnsubscribe) {
-    groupsStore.feedUnsubscribe()
-    groupsStore.feedUnsubscribe = null
-  }
-
-  if (unsubscribeSessions) {
-    unsubscribeSessions()
-    unsubscribeSessions = null
-  }
+  cleanupDashboardSessionsListener()
 })
 
 function formatSessionDate(date: Date) {

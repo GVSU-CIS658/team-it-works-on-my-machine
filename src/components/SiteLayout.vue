@@ -44,6 +44,8 @@
 
           <v-list class="section-user-dropdown">
             <v-list-item to="/profile" title="Profile" />
+            <v-divider />
+            <v-list-item to="/help" title="Help" />
             <v-list-item title="Logout" @click="logout" />
           </v-list>
         </v-menu>

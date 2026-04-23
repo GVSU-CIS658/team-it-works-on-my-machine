@@ -8,20 +8,10 @@
   .groups-error-message
     margin-bottom: 1rem
     padding: 0.75rem 1rem
-    border: 1px solid rgba(255, 99, 71, 0.45)
+    border: 1px solid var(--status-error-border)
     border-radius: 8px
-    background: rgba(255, 99, 71, 0.12)
-    color: #ffd6cc
-
-  h2,
-  h3,
-  p,
-  li,
-  a,
-  .sessions-controls,
-  .sessions-placeholder,
-  .sessions-dialog
-    color: var(--groups-panel-end)
+    background: var(--status-error-surface)
+    color: var(--status-error-text)
 
   .page-hero
     text-align: center
@@ -31,11 +21,18 @@
     max-width: none
     margin-bottom: 2rem
     font-size: clamp(2rem, 3vw, 2.8rem)
-    white-space: nowrap
 
   .sessions-header h2
     margin: 0 0 0.75rem
     font-size: 1.5rem
+    color: var(--groups-panel-end)
+
+  .sessions-header p
+    color: var(--groups-panel-end)
+
+  .sessions-visibility-note
+    margin-top: 0.5rem
+    color: var(--muted-text)
 
   .sessions-controls
     display: grid
@@ -53,30 +50,30 @@
     align-self: center
     width: auto
     min-width: 0
-    margin-bottom: 20px
+    margin-bottom: 1.25rem
 
   .sessions-list-section
-    margin: 20px
-    padding: 20px
+    margin: 1.25rem
+    padding: 1.25rem
     border: 1px solid
     border-radius: 1.25rem
-    color: rgba(43, 43, 43, 0.98)
-    background-color: rgba(187, 188, 196, 0.98)
+    color: var(--app-panel-text)
+    background-color: var(--app-panel-surface)
 
     h2
       margin: 0 0 1rem
-      color: rgba(43, 43, 43, 0.98)
+      color: var(--app-panel-text)
 
   .sessions-empty,
   .sessions-placeholder p
-    color: rgba(43, 43, 43, 0.98)
+    color: var(--app-panel-text)
 
   .sessions-placeholder
-    margin: 20px
+    margin: 1.25rem
     padding: 24px
     border: 1px solid
     border-radius: 1.25rem
-    background-color: rgba(187, 188, 196, 0.98)
+    background-color: var(--app-panel-surface)
     text-align: center
 
   .content-card
@@ -99,6 +96,22 @@
   min-width: 0
   width: auto
 
+.sessions-group-select
+  :deep(.v-field__outline)
+    color: color-mix(in srgb, var(--groups-panel-end) 78%, white)
+
+  :deep(.v-label),
+  :deep(input)
+    color: color-mix(in srgb, var(--groups-panel-end) 78%, white)
+
+  :deep(.v-select__selection),
+  :deep(.v-select__selection-text)
+    color: color-mix(in srgb, var(--groups-panel-end) 78%, white)
+
+  :deep(.v-list-item-title),
+  :deep(.v-list-item-subtitle)
+    color: color-mix(in srgb, var(--groups-panel-end) 78%, white)
+
 .sessions-list
   list-style: none
   padding: 0
@@ -110,11 +123,11 @@
   justify-content: space-between
   gap: 1rem
   padding: 1rem 0
-  border-top: 1px solid rgba(43, 43, 43, 0.32)
-  color: rgba(43, 43, 43, 0.98)
+  border-top: 1px solid var(--app-panel-border)
+  color: var(--app-panel-text)
 
   &:last-child
-    border-bottom: 1px solid rgba(43, 43, 43, 0.32)
+    border-bottom: 1px solid var(--app-panel-border)
 
   &__info
     display: flex
@@ -122,26 +135,20 @@
     gap: 1.5rem
     min-width: 0
     flex: 1
-    color: rgba(43, 43, 43, 0.98)
+    color: var(--app-panel-text)
 
   &__title
     min-width: 12rem
     margin: 0
-    color: rgba(43, 43, 43, 0.98) !important
+    color: var(--app-panel-text) !important
 
   &__date,
   &__location
     margin: 0
-    color: rgba(43, 43, 43, 0.98) !important
+    color: var(--app-panel-text) !important
 
   &__location a
-    color: rgba(43, 43, 43, 0.98) !important
-
-  span
-    color: rgba(43, 43, 43, 0.98) !important
-
-  *
-    color: rgba(43, 43, 43, 0.98) !important
+    color: var(--app-panel-text) !important
 
   &__actions
     display: flex
@@ -171,15 +178,15 @@
     padding-top: 0.5rem
 
   :deep(.v-field)
-    background: rgba(255, 255, 255, 0.86)
-    color: rgba(43, 43, 43, 0.98)
+    background: var(--app-input-surface)
+    color: var(--app-panel-text)
 
   :deep(.v-field__outline)
-    color: rgba(43, 43, 43, 0.24)
+    color: color-mix(in srgb, var(--app-panel-text) 55%, transparent)
 
   :deep(.v-label),
   :deep(input)
-    color: rgba(43, 43, 43, 0.98)
+    color: var(--app-panel-text)
 
   :deep(input[type="date"]::-webkit-calendar-picker-indicator),
   :deep(input[type="time"]::-webkit-calendar-picker-indicator)
@@ -206,6 +213,10 @@
 
     .sessions-group-select
       max-width: none
+
+    .sessions-list-section,
+    .sessions-placeholder
+      margin: 1rem 0
 
   .session-card
     align-items: flex-start

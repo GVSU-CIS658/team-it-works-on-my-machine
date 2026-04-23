@@ -12,7 +12,7 @@ import {
   signInWithPopup,
   signOut,
 } from 'firebase/auth'
-import { deleteDoc, doc, getDoc, setDoc } from 'firebase/firestore'
+import { doc, getDoc } from 'firebase/firestore'
 import { httpsCallable } from 'firebase/functions'
 
 import { auth as firebaseAuth, db, functions } from '../services/firebase'
@@ -37,6 +37,14 @@ function getAuthErrorMessage(error) {
       return 'Email or password is incorrect.'
     case 'auth/weak-password':
       return 'Password should be at least 6 characters.'
+    case 'auth/popup-closed-by-user':
+      return 'Google sign-in was canceled before it finished.'
+    case 'auth/popup-blocked':
+      return 'Your browser blocked the Google sign-in popup. Allow popups and try again.'
+    case 'auth/too-many-requests':
+      return 'Too many attempts. Wait a moment and try again.'
+    case 'auth/network-request-failed':
+      return 'Network issue detected. Check your connection and try again.'
     case 'auth/requires-recent-login':
       return 'Please log out and log back in before deleting your account.'
     default:
@@ -103,7 +111,7 @@ export const useAuthStore = defineStore('auth', {
           (error) => {
             this.user = null
             this.role = DEFAULT_ROLE
-            this.error = error.message
+            this.error = getAuthErrorMessage(error)
             this.isHydrated = true
             this.isLoading = false
             resolve(null)
@@ -243,7 +251,7 @@ export const useAuthStore = defineStore('auth', {
 
         return updatedProfile
       } catch (error) {
-        this.error = error?.message ?? 'Profile update failed. Please try again.'
+        this.error = getAuthErrorMessage(error)
         throw error
       } finally {
         this.isLoading = false

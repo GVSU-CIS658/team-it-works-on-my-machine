@@ -112,6 +112,9 @@ async function confirmDeleteProfile() {
             Are you sure you want to remove yourself?<br />
             There is no going back from this!
           </p>
+          <p class="profile-delete-note">
+            If deletion is blocked, log out and back in again before retrying.
+          </p>
           <p v-if="auth.error" class="profile-delete-error">
             {{ auth.error }}
           </p>

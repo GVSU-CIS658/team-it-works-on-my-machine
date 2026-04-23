@@ -90,6 +90,7 @@ export const DashboardTask = defineStore('DashboardTask', {
 
     init(ownerId: string) {
       if (!ownerId) {
+        this.cleanup()
         return
       }
 
@@ -121,6 +122,17 @@ export const DashboardTask = defineStore('DashboardTask', {
           this.unsubscribe = null
         },
       )
+    },
+    cleanup() {
+      if (this.unsubscribe) {
+        this.unsubscribe()
+        this.unsubscribe = null
+      }
+
+      this.ownerId = ''
+      this.tasks = []
+      this.filteredTasks = []
+      this.error = ''
     },
 
     async addTask(description: string, dueAt?: string) {

@@ -26,11 +26,13 @@ function isValidEmailAddress(value) {
 
 function openPanel(panelName) {
   auth.clearError()
+  signupEmailError.value = ''
   activePanel.value = panelName
 }
 
 function closePanel() {
   auth.clearError()
+  signupEmailError.value = ''
   activePanel.value = null
 }
 
@@ -238,6 +240,7 @@ async function signupWithEmail() {
             variant="flat"
             aria-label="Continue with Google"
             :loading="auth.isLoading"
+            :disabled="auth.isLoading"
             @click="loginWithGoogle">
             <img class="login-provider-icon" :src="googleIcon" alt="Continue with Google" />
           </v-btn>
@@ -292,6 +295,7 @@ async function signupWithEmail() {
             class="button-pill login-action-button signup-action-button"
             variant="flat"
             :loading="auth.isLoading"
+            :disabled="auth.isLoading"
             @click="signupWithEmail">
             Save
           </v-btn>

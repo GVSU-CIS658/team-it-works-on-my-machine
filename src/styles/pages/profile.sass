@@ -28,7 +28,7 @@
   color: var(--body-text)
 
 .profile-card
-  width: 50%
+  width: min(100%, 34rem)
   padding: 1.5rem
   border: 1px solid var(--shell-border)
   border-radius: 1.25rem
@@ -81,8 +81,8 @@
   justify-content: center
 
 .profile-delete-action-button
-  background: #dc2626
-  color: #fff
+  background: var(--danger-face)
+  color: var(--danger-text)
 
 .profile-delete-confirmation
   display: grid
@@ -99,6 +99,11 @@
 .profile-delete-error
   color: var(--hero-error)
 
+.profile-delete-note
+  color: var(--body-text)
+  font-size: 1rem !important
+  font-weight: 600 !important
+
 .profile-delete-actions
   display: grid
   justify-content: center
@@ -111,12 +116,12 @@
   justify-content: center
 
 .profile-delete-button--confirm
-  background: #facc15
-  color: #1f2937
+  background: var(--warning-face)
+  color: var(--warning-text)
 
 .profile-delete-button--cancel
-  background: #22c55e
-  color: #052e16
+  background: var(--success-face)
+  color: var(--success-text)
 
 :deep(.profile-action-button .v-btn__content),
 :deep(.profile-delete-button .v-btn__content)
@@ -127,8 +132,8 @@
   text-align: center
 
 :deep(.profile-delete-action-button.v-btn)
-  background: #dc2626
-  color: #fff
+  background: var(--danger-face)
+  color: var(--danger-text)
 
 @media (max-width: 720px)
   .profile-view

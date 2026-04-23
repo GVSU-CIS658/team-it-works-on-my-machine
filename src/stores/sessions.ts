@@ -104,6 +104,9 @@ export const useSessionsStore = defineStore('sessions', {
       this.isLoading = false
       this.error = ''
     },
+    cleanup() {
+      this.reset()
+    },
 
     setActiveGroup(groupId: string) {
       this.activeGroupId = groupId

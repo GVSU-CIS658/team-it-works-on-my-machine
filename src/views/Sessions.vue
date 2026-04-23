@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 
 import { useAuthStore } from '../stores/auth'
 import { useGroupsStore } from '../stores/groups'
@@ -36,6 +36,20 @@ const selectedGroup = computed(() => (
 const selectedGroupTitle = computed(() => selectedGroup.value?.name ?? '')
 const sessionsError = computed(() => sessionsStore.error)
 
+function applySelectedGroup(groupId: string) {
+  if (!groupId) {
+    selectedGroupId.value = ''
+    sessionsStore.setActiveGroup('')
+    return
+  }
+
+  if (selectedGroupId.value !== groupId) {
+    selectedGroupId.value = groupId
+  }
+
+  sessionsStore.setActiveGroup(groupId)
+}
+
 watch(
   () => auth.user?.uid ?? '',
   (ownerId) => {
@@ -43,7 +57,7 @@ watch(
     sessionsStore.init(ownerId)
 
     if (ownerId && selectedGroupId.value) {
-      sessionsStore.setActiveGroup(selectedGroupId.value)
+      applySelectedGroup(selectedGroupId.value)
     }
   },
   { immediate: true },
@@ -53,18 +67,17 @@ watch(
   () => groupsStore.userGroups,
   (availableGroups) => {
     if (!availableGroups.length) {
-      selectedGroupId.value = ''
-      sessionsStore.setActiveGroup('')
+      applySelectedGroup('')
       return
     }
 
     if (!availableGroups.some((group) => group.id === selectedGroupId.value)) {
-      selectedGroupId.value = availableGroups[0].id
+      applySelectedGroup(availableGroups[0].id)
       return
     }
 
     if (selectedGroupId.value) {
-      sessionsStore.setActiveGroup(selectedGroupId.value)
+      applySelectedGroup(selectedGroupId.value)
     }
   },
   { immediate: true, deep: true },
@@ -73,7 +86,14 @@ watch(
 watch(
   selectedGroupId,
   (groupId) => {
-    sessionsStore.setActiveGroup(groupId)
+    if (!groupId) {
+      sessionsStore.setActiveGroup('')
+      return
+    }
+
+    if (sessionsStore.activeGroupId !== groupId || !sessionsStore.sessions.length) {
+      sessionsStore.setActiveGroup(groupId)
+    }
   },
   { immediate: true },
 )
@@ -193,6 +213,10 @@ async function deleteSession(sessionId: string) {
     pendingDeleteId.value = ''
   }
 }
+
+onUnmounted(() => {
+  sessionsStore.cleanup()
+})
 </script>
 
 <template>
@@ -205,6 +229,7 @@ async function deleteSession(sessionId: string) {
       <h1>Sessions</h1>
       <h2>Plan and manage shared study sessions.</h2>
       <p>Select a group to view upcoming sessions, create new ones, or remove ones you created.</p>
+      <p class="sessions-visibility-note">Sessions are visible to members of the selected group.</p>
     </div>
 
     <div class="sessions-controls">
@@ -265,7 +290,7 @@ async function deleteSession(sessionId: string) {
               v-if="canManageSession(session)"
               icon="mdi-pencil"
               variant="text"
-              color="grey"
+              color="grey-darken-2"
               aria-label="Edit session"
               :disabled="pendingDeleteId === session.id"
               @click="openEditDialog(session)"
@@ -274,7 +299,7 @@ async function deleteSession(sessionId: string) {
               v-if="canManageSession(session)"
               icon="mdi-trash-can"
               variant="text"
-              color="error"
+              color="grey-darken-2"
               aria-label="Delete session"
               :loading="pendingDeleteId === session.id"
               :disabled="pendingDeleteId === session.id"

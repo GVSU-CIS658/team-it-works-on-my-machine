@@ -1,21 +1,3 @@
-ul
-  list-style-type: none
-  padding: 1rem 0
-
-li
-  border-top: 1px solid gray
-
-li:last-child
-  border-bottom: 1px solid gray
-
-h2
-  margin: 0px
-  font-size: 1.5625rem
-
-nav ul
-  height: 300px
-  width: auto
-  overflow-y: scroll
 .dashboard-view
   margin: 0rem auto
   padding: 3rem 2rem 4rem
@@ -25,7 +7,39 @@ nav ul
 
 .head
   margin-left: 1.5rem
+
+.dashboard-section-heading
+  display: grid
+  gap: 0.2rem
+
+  p
+    margin: 0
+    font-size: 0.9rem
+    color: color-mix(in srgb, var(--app-panel-text) 72%, transparent)
+
 .dashboard
+  &-task-list ul,
+  &-panel-list
+    list-style-type: none
+    padding: 1rem 0
+
+  &-task-list ul
+    height: 300px
+    width: auto
+    overflow-y: scroll
+
+  &-task-list li,
+  &-panel-list li
+    border-top: 1px solid var(--app-input-border)
+
+  &-task-list li:last-child,
+  &-panel-list li:last-child
+    border-bottom: 1px solid var(--app-input-border)
+
+  &-section-heading h2
+    margin: 0
+    font-size: 1.5625rem
+
   &-option
     display: flex
     justify-content: space-around
@@ -35,8 +49,8 @@ nav ul
     border: 1px solid
     border-radius: 1.25rem
 
-    color: rgba(43, 43, 43, 0.98)
-    background-color: rgba(187, 188, 196, 0.98)
+    color: var(--app-panel-text)
+    background-color: var(--app-panel-surface)
     justify-items: center
 
   &-border
@@ -45,8 +59,8 @@ nav ul
     border: 1px solid
     border-radius: 1.25rem
 
-    color: rgba(43, 43, 43, 0.98)
-    background-color: rgba(187, 188, 196, 0.98)
+    color: var(--app-panel-text)
+    background-color: var(--app-panel-surface)
     &-pop
       justify-content: center
 
@@ -78,15 +92,19 @@ nav ul
   &-header
     cursor: pointer
     text-decoration: none
+
+    .dashboard-section-heading p
+      color: color-mix(in srgb, var(--app-panel-text) 72%, transparent)
+
   &-input
     min-width: 0
     width: auto
     flex: 1
     padding: .8rem 1rem
     border-radius: 10px
-    border: 1px solid gray
-    color: black
-    background-color: white
+    border: 1px solid var(--app-input-border)
+    color: var(--app-panel-text)
+    background-color: var(--app-input-surface)
   &-list
     display: flex
     justify-content: space-between
@@ -95,3 +113,17 @@ nav ul
   &-pad
     display: flex
     align-items: center
+
+@media (max-width: 720px)
+  .dashboard-view
+    padding: 2rem 1rem 3rem
+
+  .dashboard-title
+    grid-template-columns: 1fr
+
+  .dashboard-filter-select
+    justify-self: stretch
+    max-width: none
+
+  .dashboard-task-actions
+    justify-content: flex-start
