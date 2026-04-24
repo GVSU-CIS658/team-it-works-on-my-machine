@@ -3,6 +3,7 @@
   import vuetify from 'vite-plugin-vuetify'
 
   export default defineConfig({
+    base: '/team-it-works-on-my-machine/',
     plugins: [
       vue(),
       vuetify({ autoImport: true }),
